@@ -5,7 +5,7 @@ import axios from 'axios';
 const PORT = process.env.PORT ?? 3008
 const MONGO_DB_URI = 'mongodb+srv://jrrdl1506mx:1234@cluster0.5mhti9d.mongodb.net/Calendar';
 const MONGO_DB_NAME = 'Calendar';
-const TOKEN_ACCESS = 'EAAXvbvB8HmkBOxkqCLu3ZAHpreJAwu45k9g0kLi8o9qKrSkOzKxD7CZC7R5KDsDJo8JNcUH4xmr6bKfHyJBcJYIakb5Eb0MDDTZBmklVXXFBUI4B8FQId1H2Kt27T4PIexXLXV5AnUJBEQ2xuZA84ZAZA1IQhZBZBlrSZC7LDruJMLKo0OM8xqAdYBvnRo7UofhVgU3Jci7zDXTzajZAhV5eOA2L22VqUZD';
+const TOKEN_ACCESS = 'EAAXvbvB8HmkBOZCCGZAK7Ysm8oFicHSZBdZC0mRYWQZAhIurwURlKIzRrAyXHo6LogxpoAs8ALb9tQc7Mx9ucdxvYpYV9OK1N7uUnsqrTZB7GCXsTw00NWS38Jy8dnisVDAs72230YL7RhnkGMtTmCB43oMX8GdIyeY6ERLfc1wspCAF3T4D7Rcen6agfsC33se66ZAeXJhKw8l86oGK1QVIz906mEZD';
 
 // Mapa para almacenar sesiones de usuarios bdhbsjhaj
 const sesiones = new Map();

@@ -32,7 +32,7 @@ import {
 const PORT = process.env.PORT ?? 3008
 const MONGO_DB_URI = 'mongodb+srv://jrrdl1506mx:1234@cluster0.5mhti9d.mongodb.net/Calendar';
 const MONGO_DB_NAME = 'Calendar';
-const TOKEN_ACCESS = 'EAAXvbvB8HmkBO76fkOJb30IdgWeyYR6KtjE6iIGvE9YwaZCcd0ZBfwLZAnxhC8VhGuUKrxmDK3bwERx9yXYQjDY5sOTg3l3cjZAeULwBUNY4IpW6P8gdfK6YNS37NGdvXHlkC1MTuP6wtfSLHaZBm8HwN5vsJpiPZCZCJUJdDHA3ZBdFmB57uQMK0siiNHYYKB4OWzUKeMIt9QaZACPXBPYbF981aepoZD';
+const TOKEN_ACCESS = 'EAAXvbvB8HmkBO1rW1nqx8Di2tG5zyP1eLZBOZBlF1XxPBeRy7gLJeN58f4gqomIEUcd5CkWPgThEAvLtHusxZC27ZAisKjuXWL0YEDbmOAfEnBvW8W0qDcdtSPUNK1eeqdhQczPYMFxyKQQzlLTrIrPS7YdOJGXaBkbqok7Bk0tcKVOTxrd4ZAiFO5PQG2EZBCVmjZBiGzilecaTyGoHa7nAPH9MxEZD';
 
 // Mapa para almacenar sesiones de usuarios
 const sesiones = new Map();
