@@ -55,7 +55,7 @@ export const flowAgendarCitaMenor = addKeyword('Paciente menor')
             if (!datosUsuario.apellidoPaterno) {
                 return fallBack('❌ Por favor, ingresa un apellido paterno válido.');
             } else {
-                return gotoFlow(flowTenerCorreo); // Avanza al siguiente paso
+                return gotoFlow(flowApellidoMenor); // Avanza al siguiente paso
             }
         });
 
