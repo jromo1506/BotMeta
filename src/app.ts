@@ -109,293 +109,7 @@ export const flowmenorejemplo = addKeyword('NOMBRE_TUTOR')
         });
 
 
-
-
-// export const flowGeneroPacienteMenor = addKeyword('GENERO_PACIENTE_M')
-//     .addAnswer('¿Cuál es el género del paciente?🚻', null, async (ctx, { flowDynamic }) => {
-//         await flowDynamic([
-//             {
-//                 body: 'Selecciona una opción:🔘',
-//                 buttons: [
-//                     { body: 'Hombre 👨' },
-//                     { body: 'Mujer 👩' }
-//                 ]
-//             }
-//         ]);
-//     })
-//     .addAnswer(
-//         '',
-//         { capture: true },
-//         async (ctx, { fallBack, gotoFlow }) => {
-//             const idUsuario = ctx.from;
-//             const datosUsuario = sesiones.get(idUsuario);
-//             const generoSeleccionado = ctx.body.trim().toLowerCase();
-
-//             if (generoSeleccionado !== 'masculino' && generoSeleccionado !== 'femenino') {
-//                 return fallBack('❌ Opción inválida. Por favor, selecciona "Masculino 👨" o "Femenino 👩".');
-//             }
-
-//             datosUsuario.genero = generoSeleccionado;
-//             console.log(`✔ Género (${idUsuario}): ${datosUsuario.genero}`);
-
-//             return gotoFlow(flowReferidoMenor); // Avanza al siguiente flujo
-//         }
-//     );
-
-// export const flowReferidoMenor = addKeyword('GENERO')
-//     .addAnswer(
-//         '👥 ¿Fue referido por alguno de nuestros pacientes? Si es así, por favor indica su nombre. Si no, simplemente escribe "no".',
-//         { capture: true },
-//         async (ctx, { fallBack, gotoFlow }) => {
-//             const idUsuario = ctx.from;
-
-//             // ✅ Asegurar que la sesión del usuario existe
-//             if (!sesiones.has(idUsuario)) {
-//                 sesiones.set(idUsuario, {}); // Se inicializa un objeto vacío si no existe
-//             }
-
-//             const datosUsuario = sesiones.get(idUsuario);
-//             datosUsuario.nombreReferido = ctx.body.trim();
-//             console.log(`✔ Nombre referido (${idUsuario}): ${datosUsuario.nombreReferido}`);
-
-//             if (!datosUsuario.nombreReferido) {
-//                 return fallBack('❌ Por favor, ingresa un nombre válido o escribe "no".');
-//             } else {
-//                 return gotoFlow(flowFechaNacimientoMenor); // Avanza al siguiente flujo
-//             }
-//         }
-//     );
-
-
-// export const flowFechaNacimientoMenor = addKeyword('FECHA_NACIMIENTO_PACIENTE_M')
-//     .addAnswer('¿Cuál es su fecha de nacimiento? (Formato: YYYY-MM-DD) 🗓️',
-//         { capture: true }, async (ctx, { fallBack, gotoFlow }) => {
-//             const idUsuario = ctx.from;
-//             const datosUsuario = sesiones.get(idUsuario);
-//             datosUsuario.fechaNac = ctx.body.trim();
-//             console.log(`Fecha de Nacimiento (${idUsuario}): ${datosUsuario.fechaNac}`);
-
-//             const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-//             if (!dateRegex.test(datosUsuario.fechaNac)) {
-//                 return fallBack('❌ Por favor, ingresa una fecha válida en el formato YYYY-MM-DD.');
-//             } else {
-//                 return gotoFlow(flowCorreoElectronicoMenor); // Avanza al siguiente paso
-//             }
-//         });
-
-// export const flowCorreoElectronicoMenor = addKeyword('CORREO_PACIENTE_M')
-//     .addAnswer('Correo electrónico de padre, madre o tutor: 📧 ',
-//         { capture: true }, async (ctx, { fallBack, gotoFlow }) => {
-//             const idUsuario = ctx.from;
-//             const datosUsuario = sesiones.get(idUsuario);
-//             datosUsuario.correoElectronico = ctx.body.trim();
-//             console.log(`Correo Electrónico (${idUsuario}): ${datosUsuario.correoElectronico}`);
-
-//             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-//             if (!emailRegex.test(datosUsuario.correoElectronico)) {
-//                 return fallBack('❌ Por favor, ingresa un correo electrónico válido.');
-//             } else {
-//                 return gotoFlow(flowApodoMenor); // Avanza al siguiente paso
-//             }
-//         });
-
-
-
-// export const flowApodoMenor = addKeyword('APODO_PACIENTE_M')
-//     .addAnswer('¿Cómo le gustaría que le digan al paciente? 🗣️',
-//         { capture: true }, async (ctx, { fallBack, gotoFlow }) => {
-//             const idUsuario = ctx.from;
-//             const datosUsuario = sesiones.get(idUsuario);
-//             datosUsuario.apodo = ctx.body.trim();
-//             console.log(`Apodo (${idUsuario}): ${datosUsuario.apodo}`);
-
-//             if (!datosUsuario.apodo) {
-//                 return fallBack('❌ Por favor, ingresa un apodo válido.');
-//             } else {
-//                 return gotoFlow(flowCondicionMedicaMenor); // Avanza al siguiente paso
-//             }
-//         });
-
-// export const flowCondicionMedicaMenor = addKeyword('CONDICION_PACIENTE_M')
-//     .addAnswer('¿Tienes alguna condición médica, alergia, enfermedad o estás tomando algún medicamento que el doctor deba conocer? Si no, por favor escribe "Ninguna". 💉 ',
-//         { capture: true }, async (ctx, { fallBack, gotoFlow }) => {
-//             const idUsuario = ctx.from;
-//             const datosUsuario = sesiones.get(idUsuario);
-//             datosUsuario.condicion = ctx.body.trim();
-//             console.log(`Condición (${idUsuario}): ${datosUsuario.condicion}`);
-
-//             if (!datosUsuario.condicion) {
-//                 return fallBack('❌ Por favor, ingresa una condición válida.');
-//             } else {
-//                 return gotoFlow(flowTelefonoMenor); // Avanza al siguiente paso
-//             }
-//         });
-
-// export const flowTelefonoMenor = addKeyword('TELEFONO_PACIENTE_M')
-//     .addAnswer('¿Número telefónico de padre, madre o tutor? 📞',
-//         { capture: true }, async (ctx, { fallBack, gotoFlow }) => {
-//             const idUsuario = ctx.from;
-//             const datosUsuario = sesiones.get(idUsuario);
-//             datosUsuario.telefono = ctx.body.trim();
-//             console.log(`Número telefónico (${idUsuario}): ${datosUsuario.telefono}`);
-
-//             const phoneRegex = /^\d{10}$/;
-//             if (!phoneRegex.test(datosUsuario.telefono)) {
-//                 return fallBack('❌ Por favor, ingresa un número de teléfono válido.');
-//             } else {
-//                 return gotoFlow(flowMotivoVisitaMenor); // Avanza al siguiente paso
-//             }
-//         });
-
-// export const flowMotivoVisitaMenor = addKeyword('MOTIVO_VISITA_PACIENTE_M')
-//     .addAnswer('¿Cuál es el motivo de visita? 🏥',
-//         { capture: true }, async (ctx, { fallBack, gotoFlow }) => {
-//             const idUsuario = ctx.from;
-//             const datosUsuario = sesiones.get(idUsuario);
-//             datosUsuario.motivoVisita = ctx.body.trim();
-//             console.log(`Motivo de Consulta (${idUsuario}): ${datosUsuario.motivoVisita}`);
-
-//             if (!datosUsuario.motivoVisita) {
-//                 return fallBack('❌ Por favor, ingresa un motivo válido.');
-//             } else {
-//                 return gotoFlow(flowObtenerCitasMenor); // Avanza al siguiente paso
-//             }
-//         });
-
-// export const flowObtenerCitasMenor = addKeyword('OBTENER_CITAS_PACIENTE_M')
-//     .addAction(async (ctx, { flowDynamic, gotoFlow }) => {
-//         const idUsuario = ctx.from;
-//         const datosUsuario = sesiones.get(idUsuario);
-
-//         try {
-//             const response = await axios.post('http://localhost:5000/DentalArce/paciente', {
-//                 nombre: datosUsuario.nombre,
-//                 telefonoPaciente: datosUsuario.telefono,
-//                 nombreReferido: datosUsuario.nombreReferido,
-//                 apeM: datosUsuario.apellidoMaterno,
-//                 apeP: datosUsuario.apellidoPaterno,
-//                 fechaNac: datosUsuario.fechaNac,
-//                 correoElectronico: datosUsuario.correoElectronico,
-//                 apodo: datosUsuario.apodo,
-//                 condicion: datosUsuario.condicion,
-//                 motivoVisita: datosUsuario.motivoVisita,
-//                 genero: datosUsuario.genero || null,
-//                 nombreTutor: datosUsuario.nombreTutor || null,
-//                 altura: datosUsuario.altura || null,
-//                 peso: datosUsuario.peso || null,
-//                 direccion: datosUsuario.direccion || null,
-//                 alergias: datosUsuario.alergias || null,
-//                 medicamentos: datosUsuario.medicamentos || null,
-//                 idDoctor: datosUsuario.idDoctor || null,
-//                 telefonoWhatsapp: idUsuario,
-//             });
-
-//             console.log('Respuesta del servidor:', response.data);
-//             await flowDynamic('¡Gracias por proporcionarnos tus datos! 😊');
-//             return gotoFlow(flowCitasDisponiblesMenor);
-//         } catch (error) {
-//             console.error('Error al registrar los datos del paciente:', error);
-//             await flowDynamic('¡Oops! Algo salió mal al procesar la información. Por favor, intenta de nuevo más tarde. 🙏');
-//         }
-//     });
-
-// export const flowCitasDisponiblesMenor = addKeyword('CITAS_DISPONIBLES_M')
-//     .addAction(async (ctx, { flowDynamic, gotoFlow }) => {
-//         try {
-//             console.log('Solicitando las citas disponibles...');
-//             const response = await axios.get('http://localhost:5000/DentalArce/getAvailableSlots/ce85ebbb918c7c7dfd7bad2eec6c142012d24c2b17e803e21b9d6cc98bb8472b');
-//             const slots = response.data;
-//             console.log('Citas encontradas:', slots);
-
-//             if (slots.length === 0) {
-//                 await flowDynamic('❌ ¡Lo sentimos! Actualmente no hay citas disponibles. \n\nPor favor, intenta más tarde. 😔');
-//                 return;
-//             }
-
-//             let slotsMessage = '📅 Citas disponibles:\n\n';
-//             for (let i = 0; i < slots.length; i++) {
-//                 const slot = slots[i];
-//                 slotsMessage += `📌 *${i + 1}.* 🗓️ *${slot.day}* - ${slot.date} ⏰ *De ${slot.start} a ${slot.end}*\n\n`;
-//             }
-
-//             await flowDynamic(slotsMessage);
-
-//             const idUsuario = ctx.from;
-//             if (!sesiones.has(idUsuario)) {
-//                 sesiones.set(idUsuario, {});
-//             }
-//             const datosUsuario = sesiones.get(idUsuario);
-//             datosUsuario.slots = slots;
-//             return gotoFlow(flowSeleccionarCitaMenor);
-//         } catch (error) {
-//             console.error('Error al obtener las citas disponibles:', error);
-//             await flowDynamic('⚠️ Hubo un error al obtener las citas. \n\nPor favor, intenta nuevamente más tarde. 🙏');
-//         }
-//     });
-
-
-// export const flowSeleccionarCitaMenor = addKeyword('SELECCIONAR_CITA_M')
-//     .addAnswer('¡Genial! Por favor, elige el número de la cita que prefieras de la lista de opciones:', { capture: true }, async (ctx, { fallBack, flowDynamic, gotoFlow }) => {
-//         const idUsuario = ctx.from;
-//         const datosUsuario = sesiones.get(idUsuario);
-//         const slots = datosUsuario?.slots;
-
-//         if (!slots || slots.length === 0) {
-//             await flowDynamic('Parece que no hay citas disponibles en este momento o se perdió la información. Intenta de nuevo. 😕');
-//             return;
-//         }
-
-//         const userInput = ctx.body.trim();
-//         const userChoice = parseInt(userInput, 10);
-
-//         if (isNaN(userChoice) || userChoice < 1 || userChoice > slots.length) {
-//             return fallBack('❌ Opción inválida. Por favor, elige un número válido de la lista de citas disponibles.');
-//         }
-
-//         const selectedSlot = slots[userChoice - 1];
-//         datosUsuario.horario = `${selectedSlot.day} ${selectedSlot.date} de ${selectedSlot.start} a ${selectedSlot.end}`;
-//         console.log(`Usuario (${idUsuario}) seleccionó la cita:`, datosUsuario.horario);
-
-//         return gotoFlow(flowReservarCitaMenor);
-//     });
-
-// export const flowReservarCitaMenor = addKeyword('RESERVAR_CITA_M')
-//     .addAction(async (ctx, { flowDynamic }) => {
-//         const idUsuario = ctx.from;
-//         const datosUsuario = sesiones.get(idUsuario);
-//         const selectedSlot = datosUsuario.horario;
-
-//         if (!selectedSlot) {
-//             await flowDynamic('Parece que hubo un problema al seleccionar la cita. Por favor, inténtalo nuevamente. 😓');
-//             return;
-//         }
-
-//         const date = selectedSlot.split(' ')[1];
-//         const startTime = selectedSlot.split(' ')[3];
-//         const endTime = selectedSlot.split(' ')[5];
-
-//         const startDateTime = `${date}T${startTime}:00`;
-//         const endDateTime = `${date}T${endTime}:00`;
-
-//         try {
-//             const response = await axios.post('http://localhost:5000/DentalArce/crearCitaCV/ce85ebbb918c7c7dfd7bad2eec6c142012d24c2b17e803e21b9d6cc98bb8472b/ee75200b88065c8f339787783c521b9f5bcc11242f09ac9dd1512d23a98fb485', {
-//                 "summary": datosUsuario.nombre || 'Paciente desconocido',
-//                 "description": datosUsuario.motivoVisita || 'Motivo no especificado',
-//                 "startDateTime": startDateTime,
-//                 "endDateTime": endDateTime,
-//             });
-
-//             console.log('Confirmación de reserva:', response.data);
-//             await flowDynamic(`¡Tu cita ha sido reservada exitosamente para el ${datosUsuario.horario}! 🎉 Te esperamos.`);
-//         } catch (error) {
-//             console.error('Error al reservar la cita:', error);
-//             await flowDynamic('¡Ups! Algo salió mal al reservar la cita. Por favor, intenta más tarde. 🙏');
-//         }
-
-//         sesiones.delete(idUsuario);
-//     });
-
-// ---------------------------------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------
 
 
 
@@ -670,6 +384,10 @@ export const flowObtenerCitas = addKeyword('OBTENER_CITAS_PACIENTE')
             });
 
             console.log('Respuesta del servidor:', response.data);
+
+            datosUsuario._id = response.data._id;
+            console.log(`ID del paciente (${idUsuario}): ${datosUsuario._id}`);
+
             await flowDynamic('¡Gracias por proporcionarnos tus datos! 😊');
             return gotoFlow(flowCitasDisponibles);
         } catch (error) {
@@ -734,7 +452,7 @@ export const flowSeleccionarCita = addKeyword('SELECCIONAR_CITA')
         const selectedSlot = slots[userChoice - 1];
         datosUsuario.horario = `${selectedSlot.day} ${selectedSlot.date} de ${selectedSlot.start} a ${selectedSlot.end}`;
         console.log(`Usuario (${idUsuario}) seleccionó la cita:`, datosUsuario.horario);
-
+        
         return gotoFlow(flowReservarCita);
     });
 
@@ -765,6 +483,25 @@ export const flowReservarCita = addKeyword('RESERVAR_CITA')
             });
 
             console.log('Confirmación de reserva:', response.data);
+
+                // Guardar los IDs de los eventos en la sesión del usuario
+                if (response.data.event1 && response.data.event2) {
+                    datosUsuario.event1Id = response.data.event1.id;
+                    datosUsuario.event2Id = response.data.event2.id;
+
+                    console.log(`ID Usuario (${idUsuario}): ${datosUsuario._id}`);
+                    console.log(`ID de Evento 1 (${idUsuario}): ${datosUsuario.event1Id}`);
+                    console.log(`ID de Evento 2 (${idUsuario}): ${datosUsuario.event2Id}`);
+                }
+
+                const respons = await axios.post('http://localhost:5000/DentalArce/vincularPacienteCita', {
+                    "pacienteId": datosUsuario._id,
+                    "idsCitas": [datosUsuario.event1Id, datosUsuario.event2Id],
+                    "expiraEn": startDateTime
+                });
+
+                console.log('Confirmación de paciente cita', respons.data);
+            
             await flowDynamic(`¡Tu cita ha sido reservada exitosamente para el ${datosUsuario.horario}! 🎉 Te esperamos.`);
         } catch (error) {
             console.error('Error al reservar la cita:', error);

@@ -16,4 +16,12 @@ export const flowContacto = addKeyword('Ubicación')
         'Prol. Gral. Ignacio Zaragoza #1004 Col. Calicantos II, Cp. 20116.',
         'Google Maps: https://maps.app.goo.gl/PRsf7HVZvcjy9J2r9',
         '\nIngrese "inicio" para regresar al menú principal.',
-    ]);
+    ]).addAnswer(
+        'Para volver al menu principal selecciona el boton',
+        { buttons: [{ body: 'Volver al inicio 🏠' }] }, // Botón para regresar al inicio
+        // async (ctx, { gotoFlow }) => {
+        //     if (ctx.body === 'Volver al inicio 🏠') {
+        //         return gotoFlow(welcomeFlow); // Redirige al flujo de bienvenida
+        //     }
+        // }
+    );

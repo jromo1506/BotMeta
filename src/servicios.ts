@@ -18,5 +18,13 @@ export const flowServicios = addKeyword('Servicios')
         '🦷 *1. Odontología general*: Cuida tu salud dental con los mejores profesionales. ',
         '💎 *2. Rehabilitación y estética dental*: Recupérate y mejora tu sonrisa. 😁✨',
         '🔍 *3. Especialidades*: Ortodoncia, Endodoncia, Periodoncia, y más. 🔬',
-        '\n🔙 *Escribe "inicio"* para regresar al menú principal.',
-    ]);
+    ])
+    .addAnswer(
+        'Para volver al menu principal selecciona el boton',
+        { buttons: [{ body: 'Volver al inicio 🏠' }] }, // Botón para regresar al inicio
+        // async (ctx, { gotoFlow }) => {
+        //     if (ctx.body === 'Volver al inicio 🏠') {
+        //         return gotoFlow(welcomeFlow); // Redirige al flujo de bienvenida
+        //     }
+        // }
+    );
