@@ -145,5 +145,13 @@ export const flowMensajeUrgente = addKeyword('Urgente')
 export const flowNoAgendar = addKeyword(['No agendar cita'])
     .addAnswer('😞 Entendemos que no deseas agendar una cita en este momento.')
     .addAnswer('Si cambias de opinión, no dudes en contactarnos nuevamente. ¡Estaremos aquí para ayudarte! 😊')
-    .addAnswer(['Ingrese "inicio" para regresar al menú principal.']);
+    .addAnswer(
+        'Para volver al menu principal selecciona el boton',
+        { buttons: [{ body: 'Volver al inicio 🏠' }] }, // Botón para regresar al inicio
+        // async (ctx, { gotoFlow }) => {
+        //     if (ctx.body === 'Volver al inicio 🏠') {
+        //         return gotoFlow(welcomeFlow); // Redirige al flujo de bienvenida
+        //     }
+        // }
+    );
 
