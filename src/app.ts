@@ -109,7 +109,7 @@ export const flowmenorejemplo = addKeyword('NOMBRE_TUTOR')
         });
 
 
-//---------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------
 
 
 
@@ -360,10 +360,21 @@ export const flowObtenerCitas = addKeyword('OBTENER_CITAS_PACIENTE')
         const idUsuario = ctx.from;
         const datosUsuario = sesiones.get(idUsuario);
 
+          // Formatear telefonoWhatsapp (eliminar 3er dígito si ≥13 dígitos)
+          let telefonoWhatsappform = idUsuario;
+        
+          if (telefonoWhatsappform.length >= 13) {
+              const primerosDos = telefonoWhatsappform.substring(0, 2); // "52"
+              const restoNumero = telefonoWhatsappform.substring(3); // Elimina el 3er dígito ("1")
+              telefonoWhatsappform = primerosDos + restoNumero; // "52" + "XXXXXXXXXX"
+              console.log(`Número formateado: ${telefonoWhatsappform}`);
+          }
+  
+
         try {
             const response = await axios.post('http://localhost:5000/DentalArce/paciente', {
                 nombre: datosUsuario.nombre,
-                telefonoPaciente: datosUsuario.telefono,
+                telefonoPaciente: telefonoWhatsappform,
                 nombreReferido: datosUsuario.nombreReferido,
                 apeM: datosUsuario.apellidoMaterno,
                 apeP: datosUsuario.apellidoPaterno,
