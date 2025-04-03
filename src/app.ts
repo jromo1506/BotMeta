@@ -29,11 +29,9 @@ import { flowMensaje, flowMensajeUrgente, flowNoAgendar } from "./flujoMensaje";
 import { flowContacto } from "./contacto";
 
 const PORT = process.env.PORT ?? 3009;
-const MONGO_DB_URI =
-  "mongodb+srv://jrrdl1506mx:1234@cluster0.5mhti9d.mongodb.net/Calendar";
+const MONGO_DB_URI ="mongodb+srv://jrrdl1506mx:1234@cluster0.5mhti9d.mongodb.net/Calendar";
 const MONGO_DB_NAME = "Calendar";
-const TOKEN_ACCESS =
-  "EAAIfZAcqC9igBO94uMac2JIPQlBEGrBmpYAzkyl4OyinGJmpYgZBgwF1xCtgryeXhMw1ZBYmN6XvjrIfwPSvULpd8iNbrrT1T7DUJUIm2IrR0iw7vnyk4sKjwiVMlld6VbOmRgREZA5rOcQLPQr5bZA8whHL5wAWeNeZCorvDj4F3oZCesjdgbWYfwBv0ZCx2dcg7wZDZD";
+const TOKEN_ACCESS ="EAAIfZAcqC9igBO94uMac2JIPQlBEGrBmpYAzkyl4OyinGJmpYgZBgwF1xCtgryeXhMw1ZBYmN6XvjrIfwPSvULpd8iNbrrT1T7DUJUIm2IrR0iw7vnyk4sKjwiVMlld6VbOmRgREZA5rOcQLPQr5bZA8whHL5wAWeNeZCorvDj4F3oZCesjdgbWYfwBv0ZCx2dcg7wZDZD";
 
 // Mapa para almacenar sesiones de usuarios
 const sesiones = new Map();
@@ -559,8 +557,8 @@ export const flowReservarCita = addKeyword("RESERVAR_CITA").addAction(
       const response = await axios.post(
         "http://localhost:5000/DentalArce/crearCitaCV/ce85ebbb918c7c7dfd7bad2eec6c142012d24c2b17e803e21b9d6cc98bb8472b/ee75200b88065c8f339787783c521b9f5bcc11242f09ac9dd1512d23a98fb485",
         {
-          summary: datosUsuario.nombre || "Paciente desconocido",
-          description: datosUsuario.motivoVisita || "Motivo no especificado",
+          summary: datosUsuario.nombre,
+          description: datosUsuario.motivoVisita,
           startDateTime: startDateTime,
           endDateTime: endDateTime,
         }
@@ -583,7 +581,7 @@ export const flowReservarCita = addKeyword("RESERVAR_CITA").addAction(
         {
           pacienteId: datosUsuario._id,
           idsCitas: [datosUsuario.event1Id, datosUsuario.event2Id],
-          expiraEn: startDateTime,
+          recordatorioCita: startDateTime,
         }
       );
 
