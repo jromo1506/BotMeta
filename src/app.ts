@@ -447,8 +447,45 @@ export const flowObtenerCitas = addKeyword("OBTENER_CITAS_PACIENTE").addAction(
       datosUsuario._id = response.data._id;
       console.log(`ID del paciente (${idUsuario}): ${datosUsuario._id}`);
 
-      await flowDynamic("¡Gracias por proporcionarnos tus datos! 😊");
-      return gotoFlow(flowCitasDisponibles);
+      // Verificar si es masculino o menor de edad
+    const esMasculino = datosUsuario.genero?.toLowerCase() === "masculino";
+    const edad = datosUsuario.fechaNac ? new Date().getFullYear() - new Date(datosUsuario.fechaNac).getFullYear() : 0;
+    const esMenor = edad < 18;
+
+    await flowDynamic("¡Gracias por proporcionarnos tus datos! 😊");
+
+    if (esMasculino || esMenor) {
+      try {
+        const ahora = new Date();
+        
+        // Límite de pago: mañana a las 9 PM (siempre)
+        const limitePago = new Date(ahora);
+        limitePago.setDate(ahora.getDate() + 1);
+        limitePago.setHours(21, 0, 0, 0); // 9 PM
+
+        // Recordatorio: 5 horas antes del límite
+        const recordatorioPago = new Date(limitePago);
+        recordatorioPago.setHours(limitePago.getHours() - 5);
+
+        await axios.post("http://localhost:5000/DentalArce/pago", {
+          pacienteId: datosUsuario._id,
+          pacienteTel: idUsuario,
+          recordatorioPago,
+          limitePago,
+          validadorPago: false,
+        });
+
+        console.log(`Registro de pago creado:
+          - Recordatorio: ${recordatorioPago.toLocaleString()}
+          - Límite: ${limitePago.toLocaleString()}`);
+      } catch (error) {
+        console.error("Error al crear registro de pago:", error);
+      }
+
+      return gotoFlow(flowPago);
+      } else {
+        return gotoFlow(flowCitasDisponibles);
+      }
     } catch (error) {
       console.error("Error al registrar los datos del paciente:", error);
       await flowDynamic(
@@ -457,6 +494,64 @@ export const flowObtenerCitas = addKeyword("OBTENER_CITAS_PACIENTE").addAction(
     }
   }
 );
+
+//poner flujo de stripe
+export const flowPago = addKeyword(["pago", "pagar"])
+  .addAction(async (ctx, { flowDynamic, gotoFlow, state }) => {
+    const idUsuario = ctx.from;
+    const datosUsuario = sesiones.get(idUsuario);
+    
+    try {
+      // Generar enlace de pago único en Stripe
+      const response = await axios.post("http://localhost:5000/DentalArce/generar-pago", {
+        pacienteId: datosUsuario._id,
+        monto: 50000, // $500.00 MXN (Stripe usa centavos)
+        descripcion: "Consulta dental inicial",
+        metadata: {
+          pacienteId: datosUsuario._id,
+          telefono: idUsuario
+        }
+      });
+
+      const { urlPago, sessionId } = response.data;
+      datosUsuario.stripeSessionId = sessionId;
+      
+      // Mensaje simple con solo el enlace de texto
+      await flowDynamic([
+        "Para completar tu registro, necesitamos procesar el pago de la consulta inicial.",
+        `Por favor realiza tu pago en el siguiente enlace:\n\n${urlPago}`,
+        "Una vez completado el pago, recibirás una confirmación automática y podrás agendar tu cita."
+      ]);
+
+      // Verificar periódicamente el estado del pago
+      const verificarPago = async () => {
+        try {
+          const response = await axios.get(`http://localhost:5000/DentalArce/verificar-pago/${sessionId}`);
+          
+          if (response.data.pagado) {
+            await flowDynamic([
+              "¡Pago confirmado! 🎉",
+              "Ahora puedes agendar tu cita."
+            ]);
+            return gotoFlow(flowCitasDisponibles);
+          } else {
+            // Volver a verificar después de 30 segundos
+            setTimeout(verificarPago, 30000);
+          }
+        } catch (error) {
+          console.error("Error al verificar pago:", error);
+        }
+      };
+      
+      // Iniciar la verificación después de 1 minuto
+      setTimeout(verificarPago, 60000);
+      
+    } catch (error) {
+      console.error("Error al generar enlace de pago:", error);
+      await flowDynamic("Ocurrió un error al generar el enlace de pago. Por favor intenta nuevamente.");
+    }
+  });
+
 
 export const flowCitasDisponibles = addKeyword("CITAS_DISPONIBLES").addAction(
   async (ctx, { flowDynamic, gotoFlow }) => {
