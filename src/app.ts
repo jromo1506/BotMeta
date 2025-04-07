@@ -502,10 +502,9 @@ export const flowPago = addKeyword(["pago", "pagar"])
     const datosUsuario = sesiones.get(idUsuario);
     
     try {
-      // Generar enlace de pago único en Stripe
       const response = await axios.post("http://localhost:5000/DentalArce/generar-pago", {
         pacienteId: datosUsuario._id,
-        monto: 50000, // $500.00 MXN (Stripe usa centavos)
+        monto: 50000,
         descripcion: "Consulta dental inicial",
         metadata: {
           pacienteId: datosUsuario._id,
@@ -513,17 +512,17 @@ export const flowPago = addKeyword(["pago", "pagar"])
         }
       });
 
-      const { urlPago, sessionId } = response.data;
+      const { urlPago, sessionId, expiracion } = response.data;
       datosUsuario.stripeSessionId = sessionId;
       
-      // Mensaje simple con solo el enlace de texto
+      // Enviar mensaje con el enlace de pago
       await flowDynamic([
         "Para completar tu registro, necesitamos procesar el pago de la consulta inicial.",
         `Por favor realiza tu pago en el siguiente enlace:\n\n${urlPago}`,
         "Una vez completado el pago, recibirás una confirmación automática y podrás agendar tu cita."
       ]);
 
-      // Verificar periódicamente el estado del pago
+      // Verificar el pago después de un minuto
       const verificarPago = async () => {
         try {
           const response = await axios.get(`http://localhost:5000/DentalArce/verificar-pago/${sessionId}`);
@@ -542,10 +541,21 @@ export const flowPago = addKeyword(["pago", "pagar"])
           console.error("Error al verificar pago:", error);
         }
       };
-      
+
       // Iniciar la verificación después de 1 minuto
       setTimeout(verificarPago, 60000);
-      
+
+      // Notificar al usuario cuando el enlace haya expirado
+      setTimeout(async () => {
+        const ahora = new Date();
+        if (ahora.getTime() >= expiracion) {
+          await flowDynamic([
+            "Lamentablemente, el enlace de pago ha expirado. Por favor, agende una nueva cita para generar un nuevo enlace de pago."
+          ]);
+          return gotoFlow(flowAgendarCitaMayor); // Fluye hacia el flujo de agendar cita
+        }
+      }, expiracion - Date.now());
+
     } catch (error) {
       console.error("Error al generar enlace de pago:", error);
       await flowDynamic("Ocurrió un error al generar el enlace de pago. Por favor intenta nuevamente.");
