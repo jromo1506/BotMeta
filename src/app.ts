@@ -648,6 +648,26 @@ export const flowReservarCita = addKeyword("RESERVAR_CITA").addAction(
     const startDateTime = `${date}T${startTime}:00`;
     const endDateTime = `${date}T${endTime}:00`;
 
+    // Función para calcular la fecha de recordatorio (un día antes)
+    const calcularRecordatorio = (dateTimeStr) => {
+      const dateObj = new Date(dateTimeStr);
+      
+      // Restar un día
+      dateObj.setDate(dateObj.getDate() - 1);
+      
+      // Formatear la fecha de vuelta al formato ISO sin cambiar la zona horaria
+      const year = dateObj.getFullYear();
+      const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const day = String(dateObj.getDate()).padStart(2, '0');
+      const hours = String(dateObj.getHours()).padStart(2, '0');
+      const minutes = String(dateObj.getMinutes()).padStart(2, '0');
+      const seconds = String(dateObj.getSeconds()).padStart(2, '0');
+      
+      return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+    };
+
+    const recordatorioDateTime = calcularRecordatorio(startDateTime);
+
     try {
       const response = await axios.post(
         "http://localhost:5000/DentalArce/crearCitaCV/ce85ebbb918c7c7dfd7bad2eec6c142012d24c2b17e803e21b9d6cc98bb8472b/ee75200b88065c8f339787783c521b9f5bcc11242f09ac9dd1512d23a98fb485",
@@ -676,7 +696,7 @@ export const flowReservarCita = addKeyword("RESERVAR_CITA").addAction(
         {
           pacienteId: datosUsuario._id,
           idsCitas: [datosUsuario.event1Id, datosUsuario.event2Id],
-          recordatorioCita: startDateTime,
+          recordatorioCita: recordatorioDateTime,
         }
       );
 
