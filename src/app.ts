@@ -497,70 +497,151 @@ export const flowObtenerCitas = addKeyword("OBTENER_CITAS_PACIENTE").addAction(
 
 //poner flujo de stripe
 export const flowPago = addKeyword(["pago", "pagar"])
-  .addAction(async (ctx, { flowDynamic, gotoFlow, state }) => {
+  .addAction(async (ctx, { flowDynamic, gotoFlow }) => {
     const idUsuario = ctx.from;
     const datosUsuario = sesiones.get(idUsuario);
     
     try {
-      const response = await axios.post("http://localhost:5000/DentalArce/generar-pago", {
-        pacienteId: datosUsuario._id,
-        monto: 50000,
-        descripcion: "Consulta dental inicial",
-        metadata: {
-          pacienteId: datosUsuario._id,
-          telefono: idUsuario
+      // Verificar si ya tiene un pago pendiente
+      const pagoPendiente = await axios.get(`http://localhost:5000/DentalArce/pagos/pendientes/${datosUsuario._id}`);
+      
+      if (pagoPendiente.data) {
+        // Si ya tiene un pago pendiente
+        if (pagoPendiente.data.urlPago) {
+          await flowDynamic([
+            "Ya tienes un pago pendiente. Por favor completa el pago en el siguiente enlace:",
+            `\n\n${pagoPendiente.data.urlPago}`,
+            `⏳ Tienes hasta el ${new Date(pagoPendiente.data.limitePago).toLocaleString()} para completar el pago.`
+          ]);
+          
+          // Programar verificación de pago
+          programarVerificacionPago(
+            pagoPendiente.data.sessionId, 
+            pagoPendiente.data.limitePago,
+            flowDynamic,
+            gotoFlow
+          );
+          
+          return;
+        } else {
+          // Si no tiene URL de pago pero sí registro
+          await flowDynamic("Generando tu enlace de pago...");
+          return gotoFlow(flowGenerarEnlacePago);
         }
+      }
+
+      // Si no tiene registro de pago, crear uno primero
+      const ahora = new Date();
+      const limitePago = new Date(ahora);
+      limitePago.setDate(ahora.getDate() + 1); // 24 horas para pagar
+      limitePago.setHours(21, 0, 0, 0); // 9 PM
+      
+      const recordatorioPago = new Date(limitePago);
+      recordatorioPago.setHours(limitePago.getHours() - 5); // 5 horas antes
+
+      await axios.post("http://localhost:5000/DentalArce/pagos", {
+        pacienteId: datosUsuario._id,
+        pacienteTel: idUsuario,
+        recordatorioPago,
+        limitePago
       });
 
-      const { urlPago, sessionId, expiracion } = response.data;
-      datosUsuario.stripeSessionId = sessionId;
+      await flowDynamic("Generando tu enlace de pago...");
+      return gotoFlow(flowGenerarEnlacePago);
+
+    } catch (error) {
+      console.error("Error en el proceso de pago:", error);
+      await flowDynamic([
+        "Ocurrió un error al procesar tu pago.",
+        "Por favor intenta nuevamente más tarde o contacta al administrador."
+      ]);
+    }
+  });
+
+// Flow separado para generar el enlace de pago
+export const flowGenerarEnlacePago = addKeyword("GENERAR_ENLACE_PAGO")
+  .addAction(async (ctx, { flowDynamic, gotoFlow }) => {
+    const idUsuario = ctx.from;
+    const datosUsuario = sesiones.get(idUsuario);
+    
+    try {
+      const response = await axios.post("http://localhost:5000/DentalArce/pagos/generar-enlace", {
+        pacienteId: datosUsuario._id,
+        monto: 75000, 
+        descripcion: "Consulta dental inicial"
+      });
+
+      const { urlPago, sessionId, expiracion, recordatorioPago } = response.data;
+      datosUsuario.sessionIdPago = sessionId;
       
       // Enviar mensaje con el enlace de pago
       await flowDynamic([
         "Para completar tu registro, necesitamos procesar el pago de la consulta inicial.",
-        `Por favor realiza tu pago en el siguiente enlace:\n\n${urlPago}`,
-        "Una vez completado el pago, recibirás una confirmación automática y podrás agendar tu cita."
+        `💰 *Monto:* $750.00 MXN`,
+        `⏳ *Fecha límite para pagar:* ${new Date(expiracion).toLocaleString()}`,
+        `🔔 *Te recordaremos a las:* ${new Date(recordatorioPago).toLocaleTimeString()}`,
+        `\nPor favor realiza tu pago en el siguiente enlace:\n\n${urlPago}`,
+        "Una vez completado el pago, recibirás una confirmación automática."
       ]);
 
-      // Verificar el pago después de un minuto
-      const verificarPago = async () => {
-        try {
-          const response = await axios.get(`http://localhost:5000/DentalArce/verificar-pago/${sessionId}`);
-          
-          if (response.data.pagado) {
-            await flowDynamic([
-              "¡Pago confirmado! 🎉",
-              "Ahora puedes agendar tu cita."
-            ]);
-            return gotoFlow(flowCitasDisponibles);
-          } else {
-            // Volver a verificar después de 30 segundos
-            setTimeout(verificarPago, 30000);
-          }
-        } catch (error) {
-          console.error("Error al verificar pago:", error);
-        }
-      };
-
-      // Iniciar la verificación después de 1 minuto
-      setTimeout(verificarPago, 60000);
-
-      // Notificar al usuario cuando el enlace haya expirado
-      setTimeout(async () => {
-        const ahora = new Date();
-        if (ahora.getTime() >= expiracion) {
+      // Programar recordatorio
+      const tiempoRecordatorio = new Date(recordatorioPago).getTime() - Date.now();
+      if (tiempoRecordatorio > 0) {
+        setTimeout(async () => {
           await flowDynamic([
-            "Lamentablemente, el enlace de pago ha expirado. Por favor, agende una nueva cita para generar un nuevo enlace de pago."
+            "⏰ *Recordatorio:*",
+            "Tu enlace de pago expirará en 5 horas.",
+            "Por favor completa tu pago lo antes posible.",
+            `Enlace de pago:\n\n${urlPago}`
           ]);
-          return gotoFlow(flowAgendarCitaMayor); // Fluye hacia el flujo de agendar cita
-        }
-      }, expiracion - Date.now());
+        }, tiempoRecordatorio);
+      }
+
+      // Programar verificación de pago
+      programarVerificacionPago(sessionId, expiracion, flowDynamic, gotoFlow);
 
     } catch (error) {
       console.error("Error al generar enlace de pago:", error);
-      await flowDynamic("Ocurrió un error al generar el enlace de pago. Por favor intenta nuevamente.");
+      await flowDynamic([
+        "Ocurrió un error al generar el enlace de pago.",
+        "Por favor intenta nuevamente o escribe 'pagar' para reiniciar el proceso."
+      ]);
     }
   });
+
+// Función para programar la verificación del pago
+function programarVerificacionPago(sessionId, expiracion, flowDynamic, gotoFlow) {
+  // Verificar inmediatamente y luego cada 30 segundos
+  const verificar = async () => {
+    try {
+      const response = await axios.get(`http://localhost:5000/DentalArce/pagos/verificar/${sessionId}`);
+      
+      if (response.data.pagado) {
+        await flowDynamic([
+          "¡Pago confirmado! 🎉",
+          "Ahora puedes agendar tu cita."
+        ]);
+        return gotoFlow(flowCitasDisponibles);
+      } else if (response.data.expirado) {
+        await flowDynamic([
+          "⌛ El enlace de pago ha expirado.",
+          "Por favor, escribe 'pagar' para generar un nuevo enlace."
+        ]);
+        return gotoFlow(flowObtenerCitas);
+      }
+      
+      // Si no ha expirado ni pagado, verificar de nuevo en 30 segundos
+      if (new Date(expiracion) > new Date()) {
+        setTimeout(verificar, 30000);
+      }
+    } catch (error) {
+      console.error("Error al verificar pago:", error);
+    }
+  };
+  
+  // Iniciar verificación
+  verificar();
+}
 
 
 export const flowCitasDisponibles = addKeyword("CITAS_DISPONIBLES").addAction(
