@@ -781,6 +781,7 @@ export const flowReservarCita = addKeyword("RESERVAR_CITA").addAction(
         console.log(`ID de Evento 1 (${idUsuario}): ${datosUsuario.event1Id}`);
         console.log(`ID de Evento 2 (${idUsuario}): ${datosUsuario.event2Id}`);
       }
+      const env = false;
 
       const respons = await axios.post(
         "http://localhost:5000/DentalArce/vincularPacienteCita",
@@ -788,6 +789,7 @@ export const flowReservarCita = addKeyword("RESERVAR_CITA").addAction(
           pacienteId: datosUsuario._id,
           idsCitas: [datosUsuario.event1Id, datosUsuario.event2Id],
           recordatorioCita: recordatorioDateTime,
+          enviado: env,
         }
       );
 
