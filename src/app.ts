@@ -5,6 +5,7 @@ import {
   createFlow,
   addKeyword,
   utils,
+  EVENTS
 } from "@builderbot/bot";
 import { MongoAdapter as Database } from "@builderbot/database-mongo";
 import { MetaProvider as Provider } from "@builderbot/provider-meta";
@@ -29,9 +30,9 @@ import { flowMensaje, flowMensajeUrgente, flowNoAgendar } from "./flujoMensaje";
 import { flowContacto } from "./contacto";
 
 const PORT = process.env.PORT ?? 3009;
-const MONGO_DB_URI ="mongodb+srv://jrrdl1506mx:1234@cluster0.5mhti9d.mongodb.net/Calendar";
+const MONGO_DB_URI = "mongodb+srv://jrrdl1506mx:1234@cluster0.5mhti9d.mongodb.net/Calendar";
 const MONGO_DB_NAME = "Calendar";
-const TOKEN_ACCESS ="EAAIfZAcqC9igBO94uMac2JIPQlBEGrBmpYAzkyl4OyinGJmpYgZBgwF1xCtgryeXhMw1ZBYmN6XvjrIfwPSvULpd8iNbrrT1T7DUJUIm2IrR0iw7vnyk4sKjwiVMlld6VbOmRgREZA5rOcQLPQr5bZA8whHL5wAWeNeZCorvDj4F3oZCesjdgbWYfwBv0ZCx2dcg7wZDZD";
+const TOKEN_ACCESS = "EAAIfZAcqC9igBO94uMac2JIPQlBEGrBmpYAzkyl4OyinGJmpYgZBgwF1xCtgryeXhMw1ZBYmN6XvjrIfwPSvULpd8iNbrrT1T7DUJUIm2IrR0iw7vnyk4sKjwiVMlld6VbOmRgREZA5rOcQLPQr5bZA8whHL5wAWeNeZCorvDj4F3oZCesjdgbWYfwBv0ZCx2dcg7wZDZD";
 
 // Mapa para almacenar sesiones de usuarios
 const sesiones = new Map();
@@ -400,7 +401,6 @@ export const flowMotivoVisita = addKeyword("MOTIVO_VISITA_PACIENTE").addAnswer(
     }
   }
 );
-
 export const flowObtenerCitas = addKeyword("OBTENER_CITAS_PACIENTE").addAction(
   async (ctx, { flowDynamic, gotoFlow }) => {
     const idUsuario = ctx.from;
@@ -448,201 +448,94 @@ export const flowObtenerCitas = addKeyword("OBTENER_CITAS_PACIENTE").addAction(
       console.log(`ID del paciente (${idUsuario}): ${datosUsuario._id}`);
 
       // Verificar si es masculino o menor de edad
-    const esMasculino = datosUsuario.genero?.toLowerCase() === "masculino";
-    const edad = datosUsuario.fechaNac ? new Date().getFullYear() - new Date(datosUsuario.fechaNac).getFullYear() : 0;
-    const esMenor = edad < 18;
+      const esMasculino = datosUsuario.genero?.toLowerCase() === "masculino";
+      const edad = datosUsuario.fechaNac ? new Date().getFullYear() - new Date(datosUsuario.fechaNac).getFullYear() : 0;
+      const esMenor = edad < 18;
 
-    await flowDynamic("¡Gracias por proporcionarnos tus datos! 😊");
+      await flowDynamic("¡Gracias por proporcionarnos tus datos! 😊");
 
-    if (esMasculino || esMenor) {
-      try {
-        const ahora = new Date();
-        
-        // Límite de pago: mañana a las 9 PM (siempre)
-        const limitePago = new Date(ahora);
-        limitePago.setDate(ahora.getDate() + 1);
-        limitePago.setHours(21, 0, 0, 0); // 9 PM
+      if (esMasculino || esMenor) {
+        try {
+          // Registramos el pago (el backend genera las fechas y el enlace)
+          const pagoResponse = await axios.post("http://localhost:5000/DentalArce/pagos/registro", {
+            pacienteId: datosUsuario._id,
+            pacienteTel: idUsuario
+          });
 
-        // Recordatorio: 5 horas antes del límite
-        const recordatorioPago = new Date(limitePago);
-        recordatorioPago.setHours(limitePago.getHours() - 5);
+          console.log("Respuesta del registro de pago:", pagoResponse.data);
 
-        await axios.post("http://localhost:5000/DentalArce/pago", {
-          pacienteId: datosUsuario._id,
-          pacienteTel: idUsuario,
-          recordatorioPago,
-          limitePago,
-          validadorPago: false,
-        });
+          // Extraemos las fechas de la respuesta
+          const recordatorioPago = new Date(pagoResponse.data.recordatorioPago);
+          const limitePago = new Date(pagoResponse.data.limitePago);
 
-        console.log(`Registro de pago creado:
-          - Recordatorio: ${recordatorioPago.toLocaleString()}
-          - Límite: ${limitePago.toLocaleString()}`);
-      } catch (error) {
-        console.error("Error al crear registro de pago:", error);
-      }
+          // Mostramos el detalle en consola como solicitaste
+          console.log(`Registro de pago creado:
+            - URL de pago: ${pagoResponse.data.urlPago}
+            - Recordatorio: ${recordatorioPago.toLocaleString()}
+            - Límite: ${limitePago.toLocaleString()}`);
 
-      return gotoFlow(flowPago);
+          // Guardamos los datos importantes en la sesión
+          datosUsuario.urlPago = pagoResponse.data.urlPago;
+          datosUsuario.limitePago = limitePago;
+          datosUsuario.recordatorioPago = recordatorioPago;
+
+          await flowDynamic(`Hemos preparado tu enlace de pago. Tienes hasta el ${limitePago.toLocaleString()} para completar el pago.`);
+
+        } catch (error) {
+          console.error("Error al crear registro de pago:", error.response?.data || error.message);
+          await flowDynamic("Ocurrió un error al preparar tu pago. Por favor intenta nuevamente.");
+          return;
+        }
+
+        return gotoFlow(flowObtenerURLPago);
       } else {
         return gotoFlow(flowCitasDisponibles);
       }
     } catch (error) {
-      console.error("Error al registrar los datos del paciente:", error);
+      console.error("Error al registrar los datos del paciente:", error.response?.data || error.message);
       await flowDynamic(
         "¡Oops! Algo salió mal al procesar la información. Por favor, intenta de nuevo más tarde. 🙏"
       );
     }
   }
 );
-
-//poner flujo de stripe
-export const flowPago = addKeyword(["pago", "pagar"])
+// Flow obtner el enlace de pago
+const flowObtenerURLPago = addKeyword('MOSTRAR_URL_PAGO')
   .addAction(async (ctx, { flowDynamic, gotoFlow }) => {
     const idUsuario = ctx.from;
     const datosUsuario = sesiones.get(idUsuario);
-    
-    try {
-      // Verificar si ya tiene un pago pendiente
-      const pagoPendiente = await axios.get(`http://localhost:5000/DentalArce/pagos/pendientes/${datosUsuario._id}`);
-      
-      if (pagoPendiente.data) {
-        // Si ya tiene un pago pendiente
-        if (pagoPendiente.data.urlPago) {
-          await flowDynamic([
-            "Ya tienes un pago pendiente. Por favor completa el pago en el siguiente enlace:",
-            `\n\n${pagoPendiente.data.urlPago}`,
-            `⏳ Tienes hasta el ${new Date(pagoPendiente.data.limitePago).toLocaleString()} para completar el pago.`
-          ]);
-          
-          // Programar verificación de pago
-          programarVerificacionPago(
-            pagoPendiente.data.sessionId, 
-            pagoPendiente.data.limitePago,
-            flowDynamic,
-            gotoFlow
-          );
-          
-          return;
-        } else {
-          // Si no tiene URL de pago pero sí registro
-          await flowDynamic("Generando tu enlace de pago...");
-          return gotoFlow(flowGenerarEnlacePago);
-        }
+
+    await flowDynamic([
+      {
+        body: `💳 *Enlace de pago*: ${datosUsuario.urlPago}`,
+        delay: 1000
+      },
+      {
+        body: `⏳ *Fecha límite de pago*: ${datosUsuario.limitePago.toLocaleString('es-MX', { 
+          weekday: 'long', 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          timeZone: 'America/Mexico_City' 
+        })}`,
+        delay: 1000
+      },
+      {
+        body: 'Por favor realiza el pago dentro de este tiempo para garantizar tu cita. Te enviaré un recordatorio 5 horas antes del vencimiento.',
+        delay: 1000
+      },
+      {
+        body: 'Escribe "verificar pago" en cualquier momento para comprobar el estado.',
+        delay: 1000
       }
+    ]);
 
-      // Si no tiene registro de pago, crear uno primero
-      const ahora = new Date();
-      const limitePago = new Date(ahora);
-      limitePago.setDate(ahora.getDate() + 1); // 24 horas para pagar
-      limitePago.setHours(21, 0, 0, 0); // 9 PM
-      
-      const recordatorioPago = new Date(limitePago);
-      recordatorioPago.setHours(limitePago.getHours() - 5); // 5 horas antes
-
-      await axios.post("http://localhost:5000/DentalArce/pagos", {
-        pacienteId: datosUsuario._id,
-        pacienteTel: idUsuario,
-        recordatorioPago,
-        limitePago
-      });
-
-      await flowDynamic("Generando tu enlace de pago...");
-      return gotoFlow(flowGenerarEnlacePago);
-
-    } catch (error) {
-      console.error("Error en el proceso de pago:", error);
-      await flowDynamic([
-        "Ocurrió un error al procesar tu pago.",
-        "Por favor intenta nuevamente más tarde o contacta al administrador."
-      ]);
-    }
+    // Redirigir al flujo de verificación periódica
+    return;// modificar
   });
-
-// Flow separado para generar el enlace de pago
-export const flowGenerarEnlacePago = addKeyword("GENERAR_ENLACE_PAGO")
-  .addAction(async (ctx, { flowDynamic, gotoFlow }) => {
-    const idUsuario = ctx.from;
-    const datosUsuario = sesiones.get(idUsuario);
-    
-    try {
-      const response = await axios.post("http://localhost:5000/DentalArce/pagos/generar-enlace", {
-        pacienteId: datosUsuario._id,
-        monto: 75000, 
-        descripcion: "Consulta dental inicial"
-      });
-
-      const { urlPago, sessionId, expiracion, recordatorioPago } = response.data;
-      datosUsuario.sessionIdPago = sessionId;
-      
-      // Enviar mensaje con el enlace de pago
-      await flowDynamic([
-        "Para completar tu registro, necesitamos procesar el pago de la consulta inicial.",
-        `💰 *Monto:* $750.00 MXN`,
-        `⏳ *Fecha límite para pagar:* ${new Date(expiracion).toLocaleString()}`,
-        `🔔 *Te recordaremos a las:* ${new Date(recordatorioPago).toLocaleTimeString()}`,
-        `\nPor favor realiza tu pago en el siguiente enlace:\n\n${urlPago}`,
-        "Una vez completado el pago, recibirás una confirmación automática."
-      ]);
-
-      // Programar recordatorio
-      const tiempoRecordatorio = new Date(recordatorioPago).getTime() - Date.now();
-      if (tiempoRecordatorio > 0) {
-        setTimeout(async () => {
-          await flowDynamic([
-            "⏰ *Recordatorio:*",
-            "Tu enlace de pago expirará en 5 horas.",
-            "Por favor completa tu pago lo antes posible.",
-            `Enlace de pago:\n\n${urlPago}`
-          ]);
-        }, tiempoRecordatorio);
-      }
-
-      // Programar verificación de pago
-      programarVerificacionPago(sessionId, expiracion, flowDynamic, gotoFlow);
-
-    } catch (error) {
-      console.error("Error al generar enlace de pago:", error);
-      await flowDynamic([
-        "Ocurrió un error al generar el enlace de pago.",
-        "Por favor intenta nuevamente o escribe 'pagar' para reiniciar el proceso."
-      ]);
-    }
-  });
-
-// Función para programar la verificación del pago
-function programarVerificacionPago(sessionId, expiracion, flowDynamic, gotoFlow) {
-  // Verificar inmediatamente y luego cada 30 segundos
-  const verificar = async () => {
-    try {
-      const response = await axios.get(`http://localhost:5000/DentalArce/pagos/verificar/${sessionId}`);
-      
-      if (response.data.pagado) {
-        await flowDynamic([
-          "¡Pago confirmado! 🎉",
-          "Ahora puedes agendar tu cita."
-        ]);
-        return gotoFlow(flowCitasDisponibles);
-      } else if (response.data.expirado) {
-        await flowDynamic([
-          "⌛ El enlace de pago ha expirado.",
-          "Por favor, escribe 'pagar' para generar un nuevo enlace."
-        ]);
-        return gotoFlow(flowObtenerCitas);
-      }
-      
-      // Si no ha expirado ni pagado, verificar de nuevo en 30 segundos
-      if (new Date(expiracion) > new Date()) {
-        setTimeout(verificar, 30000);
-      }
-    } catch (error) {
-      console.error("Error al verificar pago:", error);
-    }
-  };
   
-  // Iniciar verificación
-  verificar();
-}
-
 
 export const flowCitasDisponibles = addKeyword("CITAS_DISPONIBLES").addAction(
   async (ctx, { flowDynamic, gotoFlow }) => {
@@ -742,10 +635,10 @@ export const flowReservarCita = addKeyword("RESERVAR_CITA").addAction(
     // Función para calcular la fecha de recordatorio (un día antes)
     const calcularRecordatorio = (dateTimeStr) => {
       const dateObj = new Date(dateTimeStr);
-      
+
       // Restar un día
       dateObj.setDate(dateObj.getDate() - 1);
-      
+
       // Formatear la fecha de vuelta al formato ISO sin cambiar la zona horaria
       const year = dateObj.getFullYear();
       const month = String(dateObj.getMonth() + 1).padStart(2, '0');
@@ -753,7 +646,7 @@ export const flowReservarCita = addKeyword("RESERVAR_CITA").addAction(
       const hours = String(dateObj.getHours()).padStart(2, '0');
       const minutes = String(dateObj.getMinutes()).padStart(2, '0');
       const seconds = String(dateObj.getSeconds()).padStart(2, '0');
-      
+
       return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
     };
 
