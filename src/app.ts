@@ -479,15 +479,13 @@ export const flowObtenerCitas = addKeyword("OBTENER_CITAS_PACIENTE").addAction(
           datosUsuario.limitePago = limitePago;
           datosUsuario.recordatorioPago = recordatorioPago;
 
-          await flowDynamic(`Hemos preparado tu enlace de pago. Tienes hasta el ${limitePago.toLocaleString()} para completar el pago.`);
-
         } catch (error) {
           console.error("Error al crear registro de pago:", error.response?.data || error.message);
-          await flowDynamic("Ocurrió un error al preparar tu pago. Por favor intenta nuevamente.");
+          await flowDynamic("Ocurrió un error al preparar tu pago. Por favor intenta nuevamente. ");
           return;
         }
 
-        return gotoFlow(flowObtenerURLPago);
+        return gotoFlow(flowPreCitasDisponible);
       } else {
         return gotoFlow(flowCitasDisponibles);
       }
@@ -499,43 +497,88 @@ export const flowObtenerCitas = addKeyword("OBTENER_CITAS_PACIENTE").addAction(
     }
   }
 );
-// Flow obtner el enlace de pago
-const flowObtenerURLPago = addKeyword('MOSTRAR_URL_PAGO')
+
+export const flowPreCitasDisponible = addKeyword('PRECITAS')
   .addAction(async (ctx, { flowDynamic, gotoFlow }) => {
     const idUsuario = ctx.from;
     const datosUsuario = sesiones.get(idUsuario);
 
-    await flowDynamic([
-      {
-        body: `💳 *Enlace de pago*: ${datosUsuario.urlPago}`,
-        delay: 1000
-      },
-      {
-        body: `⏳ *Fecha límite de pago*: ${datosUsuario.limitePago.toLocaleString('es-MX', { 
-          weekday: 'long', 
-          year: 'numeric', 
-          month: 'long', 
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-          timeZone: 'America/Mexico_City' 
-        })}`,
-        delay: 1000
-      },
-      {
-        body: 'Por favor realiza el pago dentro de este tiempo para garantizar tu cita. Te enviaré un recordatorio 5 horas antes del vencimiento.',
-        delay: 1000
-      },
-      {
-        body: 'Escribe "verificar pago" en cualquier momento para comprobar el estado.',
-        delay: 1000
-      }
-    ]);
+    console.log('=== DATOS RECUPERADOS ===');
+    console.log(datosUsuario); // Ver los datos completos
+    console.log('=======================');
+    console.log('ID Usuario:', idUsuario);
+    console.log('Datos usuario desde sesiones:', datosUsuario);
+    console.log('=========================');
 
-    // Redirigir al flujo de verificación periódica
-    return;// modificar
-  });
-  
+    // Verificación de datos
+    if (
+      !datosUsuario ||
+      !datosUsuario.urlPago ||
+      !datosUsuario.limitePago ||
+      !datosUsuario.objectId  // Asegúrate de que estamos usando el ObjectId correcto
+    ) {
+      console.log('❌ No encontramos los datos necesarios de pago.');
+      await flowDynamic('❌ No encontramos tu información de pago. Por favor vuelve a iniciar el proceso.');
+      return gotoFlow(flowObtenerCitas); // Si no hay datos, redirige
+    }
+
+    // Si los datos están correctos, mostramos los mensajes al usuario
+    try {
+      console.log('👉 Enviando mensaje con el enlace de pago...');
+      await flowDynamic([
+        `💳 Aquí está tu enlace de pago: ${datosUsuario.urlPago}`,
+        `⏰ Tu pago vence el: ${new Date(datosUsuario.limitePago).toLocaleString()}`,
+        `Cuando hayas realizado el pago, responde con "Ya pagué".`
+      ]);
+      console.log('👉 Mensajes enviados al usuario.');
+    } catch (error) {
+      console.error('❌ Error al enviar los mensajes al usuario:', error.message);
+    }
+  })
+  .addAnswer(
+    '¿Ya realizaste el pago? Escribe "Ya pagué" para verificar. ✅',
+    { capture: true },
+    async (ctx, { flowDynamic, gotoFlow }) => {
+      const idUsuario = ctx.from;
+      const mensajeUsuario = ctx.body;
+      const datosUsuario = sesiones.get(idUsuario);
+
+      console.log('📩 Mensaje recibido del cliente:', mensajeUsuario);
+
+      if (!mensajeUsuario.toLowerCase().includes('ya pagué')) return; // No hacer nada si el mensaje no es "Ya pagué"
+
+      if (!datosUsuario?.objectId) {
+        console.log('⚠️ No se pudo verificar el pago, falta el ObjectId.');
+        await flowDynamic('⚠️ No se pudo verificar tu pago. Vuelve a empezar por favor.');
+        return gotoFlow(flowObtenerCitas); // Redirigir si no hay objectId
+      }
+
+      try {
+        // Verificar el pago usando el ObjectId
+        console.log('👉 Enviando solicitud de verificación del pago...');
+        const verificar = await axios.post(`http://localhost:5000/DentalArce/verificar-pago/${datosUsuario.objectId}`);
+        console.log('👉 Respuesta de verificación:', verificar.data);
+        const estadoPago = verificar.data?.estado;
+
+        if (estadoPago === 'completado') {
+          console.log('✅ Pago confirmado.');
+          await flowDynamic('✅ ¡Pago confirmado! Te mostraremos las citas disponibles.');
+          return gotoFlow(flowCitasDisponibles); // Si el pago es confirmado
+        } else if (estadoPago === 'expirado') {
+          console.log('⛔ El pago ha expirado.');
+          await flowDynamic('⛔ Tu sesión de pago ha expirado. Vamos a reiniciar el proceso.');
+          return gotoFlow(flowObtenerCitas); // Si el pago ha expirado
+        } else {
+          console.log('⏳ Pago aún no confirmado.');
+          await flowDynamic('⏳ Tu pago aún no se ha confirmado. Espera unos minutos y responde de nuevo con "Ya pagué".');
+        }
+      } catch (err) {
+        console.error('❌ Error al verificar el pago:', err.message);
+        await flowDynamic('❌ Ocurrió un error al verificar tu pago. Intenta nuevamente más tarde.');
+      }
+    }
+  );
+
 
 export const flowCitasDisponibles = addKeyword("CITAS_DISPONIBLES").addAction(
   async (ctx, { flowDynamic, gotoFlow }) => {
