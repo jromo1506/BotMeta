@@ -401,24 +401,23 @@ export const flowMotivoVisita = addKeyword("MOTIVO_VISITA_PACIENTE").addAnswer(
     }
   }
 );
-export const flowObtenerCitas = addKeyword("OBTENER_CITAS_PACIENTE").addAction(
-  async (ctx, { flowDynamic, gotoFlow }) => {
+
+export const flowObtenerCitas = addKeyword(['OBTENER_CITAS_PACIENTE', '💳 Reintentar pago']).addAction(
+  async (ctx, { flowDynamic }) => {
     const idUsuario = ctx.from;
     const datosUsuario = sesiones.get(idUsuario);
 
-    // Formatear telefonoWhatsapp (eliminar 3er dígito si ≥13 dígitos)
     let telefonoWhatsappform = idUsuario;
-
     if (telefonoWhatsappform.length >= 13) {
-      const primerosDos = telefonoWhatsappform.substring(0, 2); // "52"
-      const restoNumero = telefonoWhatsappform.substring(3); // Elimina el 3er dígito ("1")
-      telefonoWhatsappform = primerosDos + restoNumero; // "52" + "XXXXXXXXXX"
-      console.log(`Número formateado: ${telefonoWhatsappform}`);
+      const primerosDos = telefonoWhatsappform.substring(0, 2);
+      const restoNumero = telefonoWhatsappform.substring(3);
+      telefonoWhatsappform = primerosDos + restoNumero;
     }
 
     try {
+      // Registrar datos del paciente
       const response = await axios.post(
-        "http://localhost:5000/DentalArce/paciente",
+        'http://localhost:5000/DentalArce/paciente',
         {
           nombre: datosUsuario.nombre,
           telefonoPaciente: telefonoWhatsappform,
@@ -442,145 +441,117 @@ export const flowObtenerCitas = addKeyword("OBTENER_CITAS_PACIENTE").addAction(
         }
       );
 
-      console.log("Respuesta del servidor:", response.data);
-
       datosUsuario._id = response.data._id;
-      console.log(`ID del paciente (${idUsuario}): ${datosUsuario._id}`);
 
-      // Verificar si es masculino o menor de edad
-      const esMasculino = datosUsuario.genero?.toLowerCase() === "masculino";
-      const edad = datosUsuario.fechaNac ? new Date().getFullYear() - new Date(datosUsuario.fechaNac).getFullYear() : 0;
+      const esMasculino = datosUsuario.genero?.toLowerCase() === 'masculino';
+      const edad = datosUsuario.fechaNac
+        ? new Date().getFullYear() - new Date(datosUsuario.fechaNac).getFullYear()
+        : 0;
       const esMenor = edad < 18;
 
-      await flowDynamic("¡Gracias por proporcionarnos tus datos! 😊");
+      await flowDynamic('¡Gracias por proporcionarnos tus datos! 😊');
 
       if (esMasculino || esMenor) {
+        // Generar pago
         try {
-          // Registramos el pago (el backend genera las fechas y el enlace)
-          const pagoResponse = await axios.post("http://localhost:5000/DentalArce/pagos/registro", {
+          const pagoResponse = await axios.post('http://localhost:5000/DentalArce/pagos/registro', {
             pacienteId: datosUsuario._id,
-            pacienteTel: idUsuario
+            pacienteTel: idUsuario,
           });
 
-          console.log("Respuesta del registro de pago:", pagoResponse.data);
-
-          // Extraemos las fechas de la respuesta
           const recordatorioPago = new Date(pagoResponse.data.recordatorioPago);
           const limitePago = new Date(pagoResponse.data.limitePago);
 
-          // Mostramos el detalle en consola como solicitaste
-          console.log(`Registro de pago creado:
-            - URL de pago: ${pagoResponse.data.urlPago}
-            - Recordatorio: ${recordatorioPago.toLocaleString()}
-            - Límite: ${limitePago.toLocaleString()}`);
-
-          // Guardamos los datos importantes en la sesión
           datosUsuario.urlPago = pagoResponse.data.urlPago;
           datosUsuario.limitePago = limitePago;
           datosUsuario.recordatorioPago = recordatorioPago;
+          datosUsuario.objectId = pagoResponse.data._id;
+
+          console.log('Datos del pago:', datosUsuario.urlPago, datosUsuario.limitePago, datosUsuario.objectId);
+
+          // Enviar link de pago y botones
+          await flowDynamic([
+            {
+              body: `💳 Aquí está tu enlace de pago: ${datosUsuario.urlPago}\n\n⏰ Tu pago vence el: ${limitePago.toLocaleString()}`,
+              buttons: [
+                { body: '✅ Ya pagué' },
+                { body: '❌ Cancelar' },
+              ],
+            },
+          ]);
 
         } catch (error) {
-          console.error("Error al crear registro de pago:", error.response?.data || error.message);
-          await flowDynamic("Ocurrió un error al preparar tu pago. Por favor intenta nuevamente. ");
-          return;
+          console.error('Error al crear registro de pago:', error.response?.data || error.message);
+          await flowDynamic('Ocurrió un error al preparar tu pago. Por favor intenta nuevamente.');
         }
-
-        return gotoFlow(flowPreCitasDisponible);
       } else {
-        return gotoFlow(flowCitasDisponibles);
+         await flowDynamic('¡Perfecto! Como no se requiere pago, vamos a mostrarte las citas disponibles. 🦷')
+         return ( flowCitasDisponibles);
       }
     } catch (error) {
-      console.error("Error al registrar los datos del paciente:", error.response?.data || error.message);
-      await flowDynamic(
-        "¡Oops! Algo salió mal al procesar la información. Por favor, intenta de nuevo más tarde. 🙏"
-      );
+      console.error('Error al registrar los datos del paciente:', error.response?.data || error.message);
+      await flowDynamic('¡Oops! Algo salió mal al procesar la información. Por favor, intenta de nuevo más tarde. 🙏');
     }
   }
 );
 
-export const flowPreCitasDisponible = addKeyword('PRECITAS')
+export const flowVerificarPago = addKeyword(['ya pagué', '✅ ya pagué', '🔁 Ya pagué'])
   .addAction(async (ctx, { flowDynamic, gotoFlow }) => {
     const idUsuario = ctx.from;
     const datosUsuario = sesiones.get(idUsuario);
 
-    console.log('=== DATOS RECUPERADOS ===');
-    console.log(datosUsuario); // Ver los datos completos
-    console.log('=======================');
-    console.log('ID Usuario:', idUsuario);
-    console.log('Datos usuario desde sesiones:', datosUsuario);
-    console.log('=========================');
-
-    // Verificación de datos
-    if (
-      !datosUsuario ||
-      !datosUsuario.urlPago ||
-      !datosUsuario.limitePago ||
-      !datosUsuario.objectId  // Asegúrate de que estamos usando el ObjectId correcto
-    ) {
-      console.log('❌ No encontramos los datos necesarios de pago.');
-      await flowDynamic('❌ No encontramos tu información de pago. Por favor vuelve a iniciar el proceso.');
-      return gotoFlow(flowObtenerCitas); // Si no hay datos, redirige
+    if (!datosUsuario?.objectId) {
+      await flowDynamic('No tengo registrado un pago pendiente para ti. Intenta obtener tus citas primero.');
+      return gotoFlow(flowObtenerCitas);
     }
 
-    // Si los datos están correctos, mostramos los mensajes al usuario
     try {
-      console.log('👉 Enviando mensaje con el enlace de pago...');
-      await flowDynamic([
-        `💳 Aquí está tu enlace de pago: ${datosUsuario.urlPago}`,
-        `⏰ Tu pago vence el: ${new Date(datosUsuario.limitePago).toLocaleString()}`,
-        `Cuando hayas realizado el pago, responde con "Ya pagué".`
-      ]);
-      console.log('👉 Mensajes enviados al usuario.');
-    } catch (error) {
-      console.error('❌ Error al enviar los mensajes al usuario:', error.message);
+      const verificar = await axios.post(`http://localhost:5000/DentalArce/verificar-pago/${datosUsuario.objectId}`);
+      const estadoPago = verificar.data?.estado;
+
+      if (estadoPago === 'completado') {
+        await flowDynamic([
+          {
+            body: '✅ ¡Pago confirmado! Ahora puedes ver tus citas disponibles.',
+            buttons: [
+              { body: '📅 Ver citas' }
+            ]
+          }
+        ]);
+        return gotoFlow(flowCitasDisponibles);
+      } else if (estadoPago === 'expirado') {
+        await flowDynamic([
+          {
+            body: '⛔ Tu sesión de pago ha expirado. Debes hacer el pago nuevamente.',
+            buttons: [
+              { body: '💳 Reintentar pago' }
+            ]
+          }
+        ]);
+        return gotoFlow(flowObtenerCitas);
+      } else {
+        await flowDynamic([
+          {
+            body: '⏳ El pago aún no se ha confirmado. Espera un momento y vuelve a responder con "Ya pagué".',
+            buttons: [
+              { body: '🔁 Ya pagué' }
+            ]
+          }
+        ]);
+      }      
+    } catch (err) {
+      console.error('❌ Error al verificar el pago:', err.message);
+      await flowDynamic('❌ Ocurrió un error al verificar tu pago. Intenta nuevamente más tarde.');
     }
-  })
-  .addAnswer(
-    '¿Ya realizaste el pago? Escribe "Ya pagué" para verificar. ✅',
-    { capture: true },
-    async (ctx, { flowDynamic, gotoFlow }) => {
-      const idUsuario = ctx.from;
-      const mensajeUsuario = ctx.body;
-      const datosUsuario = sesiones.get(idUsuario);
+  });
 
-      console.log('📩 Mensaje recibido del cliente:', mensajeUsuario);
-
-      if (!mensajeUsuario.toLowerCase().includes('ya pagué')) return; // No hacer nada si el mensaje no es "Ya pagué"
-
-      if (!datosUsuario?.objectId) {
-        console.log('⚠️ No se pudo verificar el pago, falta el ObjectId.');
-        await flowDynamic('⚠️ No se pudo verificar tu pago. Vuelve a empezar por favor.');
-        return gotoFlow(flowObtenerCitas); // Redirigir si no hay objectId
-      }
-
-      try {
-        // Verificar el pago usando el ObjectId
-        console.log('👉 Enviando solicitud de verificación del pago...');
-        const verificar = await axios.post(`http://localhost:5000/DentalArce/verificar-pago/${datosUsuario.objectId}`);
-        console.log('👉 Respuesta de verificación:', verificar.data);
-        const estadoPago = verificar.data?.estado;
-
-        if (estadoPago === 'completado') {
-          console.log('✅ Pago confirmado.');
-          await flowDynamic('✅ ¡Pago confirmado! Te mostraremos las citas disponibles.');
-          return gotoFlow(flowCitasDisponibles); // Si el pago es confirmado
-        } else if (estadoPago === 'expirado') {
-          console.log('⛔ El pago ha expirado.');
-          await flowDynamic('⛔ Tu sesión de pago ha expirado. Vamos a reiniciar el proceso.');
-          return gotoFlow(flowObtenerCitas); // Si el pago ha expirado
-        } else {
-          console.log('⏳ Pago aún no confirmado.');
-          await flowDynamic('⏳ Tu pago aún no se ha confirmado. Espera unos minutos y responde de nuevo con "Ya pagué".');
-        }
-      } catch (err) {
-        console.error('❌ Error al verificar el pago:', err.message);
-        await flowDynamic('❌ Ocurrió un error al verificar tu pago. Intenta nuevamente más tarde.');
-      }
-    }
-  );
+  export const flowCancelarCita = addKeyword(['cancelar', '❌ cancelar'])
+  .addAction(async (ctx, { flowDynamic }) => {
+    await flowDynamic('Has cancelado el proceso de agendar citas. Si deseas retomarlo, solo escribe "Cita". 🦷');
+  });
 
 
-export const flowCitasDisponibles = addKeyword("CITAS_DISPONIBLES").addAction(
+export const flowCitasDisponibles = addKeyword(['CITAS_DISPONIBLES', '📅 Ver citas']).addAction(
   async (ctx, { flowDynamic, gotoFlow }) => {
     try {
       console.log("Solicitando las citas disponibles...");
@@ -886,6 +857,8 @@ const main = async () => {
     flowNombrePacienteMenor,
     flowmenorejemplo,
     flowTenerCorreo,
+    flowVerificarPago,
+    flowCancelarCita,
   ]);
 
   const adapterProvider = createProvider(Provider, {
