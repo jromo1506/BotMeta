@@ -402,7 +402,7 @@ export const flowMotivoVisita = addKeyword("MOTIVO_VISITA_PACIENTE").addAnswer(
   }
 );
 
-export const flowObtenerCitas = addKeyword(['OBTENER_CITAS_PACIENTE', '💳 Reintentar pago']).addAction(
+export const flowObtenerCitas = addKeyword(['OBTENER_CITAS_PACIENTE']).addAction(
   async (ctx, { flowDynamic }) => {
     const idUsuario = ctx.from;
     const datosUsuario = sesiones.get(idUsuario);
@@ -513,9 +513,6 @@ export const flowVerificarPago = addKeyword(['ya pagué', '✅ ya pagué', '🔁
         await flowDynamic([
           {
             body: '✅ ¡Pago confirmado! Ahora puedes ver tus citas disponibles.',
-            buttons: [
-              { body: '📅 Ver citas' }
-            ]
           }
         ]);
         return gotoFlow(flowCitasDisponibles);
@@ -524,7 +521,7 @@ export const flowVerificarPago = addKeyword(['ya pagué', '✅ ya pagué', '🔁
           {
             body: '⛔ Tu sesión de pago ha expirado. Debes hacer el pago nuevamente.',
             buttons: [
-              { body: '💳 Reintentar pago' }
+              { body: '💳 Nuevo Cobro' }
             ]
           }
         ]);
@@ -545,10 +542,32 @@ export const flowVerificarPago = addKeyword(['ya pagué', '✅ ya pagué', '🔁
     }
   });
 
-  export const flowCancelarCita = addKeyword(['cancelar', '❌ cancelar'])
-  .addAction(async (ctx, { flowDynamic }) => {
-    await flowDynamic('Has cancelado el proceso de agendar citas. Si deseas retomarlo, solo escribe "Cita". 🦷');
+
+  export const flowCancelarCita = addKeyword(['cancelar', '❌ cancelar', '💳 Nuevo Cobro'])
+  .addAction(async (ctx, { flowDynamic, gotoFlow }) => {
+    const idUsuario = ctx.from;
+    const datosUsuario = sesiones.get(idUsuario);
+
+    try {
+      if (!datosUsuario || !datosUsuario._id) {
+        await flowDynamic('⚠️ No se encontró tu información registrada. No hay nada que cancelar.');
+        return gotoFlow(welcomeFlow);
+      }
+
+      // Llamada al backend para eliminar por ID
+      const res = await axios.delete(`http://localhost:5000/DentalArce/paciente/${datosUsuario._id}`);
+      console.log('🗑️ Paciente eliminado:', res.data.eliminado);
+
+      await flowDynamic('✅ Has cancelado el proceso de agendar citas y se eliminó tu información. Si deseas retomarlo, solo escribe "Cita". 🦷');
+
+      // Redirigir al flujo principal
+      return gotoFlow(welcomeFlow);
+    } catch (error) {
+      console.error('❌ Error al cancelar y eliminar:', error.message);
+      await flowDynamic('Ocurrió un error al cancelar tu cita. Intenta de nuevo más tarde.');
+    }
   });
+
 
 
 export const flowCitasDisponibles = addKeyword(['CITAS_DISPONIBLES', '📅 Ver citas']).addAction(
@@ -764,7 +783,7 @@ const flowDocs = addKeyword("Agendar")
     flowMensajeUrgente,
   ]);
 
-const welcomeFlow = addKeyword(["hola", "ole", "alo", "inicio"])
+const welcomeFlow = addKeyword(["hola", "ole", "alo", "inicio", "Cita", "cita"])
   .addAnswer(
     "🙌 ¡Hola, bienvenido a Dental Clinic Boutique! 😊",
     null,
