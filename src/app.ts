@@ -5,7 +5,7 @@ import {
   createFlow,
   addKeyword,
   utils,
-  EVENTS
+  EVENTS,
 } from "@builderbot/bot";
 import { MongoAdapter as Database } from "@builderbot/database-mongo";
 import { MetaProvider as Provider } from "@builderbot/provider-meta";
@@ -30,9 +30,11 @@ import { flowMensaje, flowMensajeUrgente, flowNoAgendar } from "./flujoMensaje";
 import { flowContacto } from "./contacto";
 
 const PORT = process.env.PORT ?? 3009;
-const MONGO_DB_URI = "mongodb+srv://jrrdl1506mx:1234@cluster0.5mhti9d.mongodb.net/Calendar";
+const MONGO_DB_URI =
+  "mongodb+srv://jrrdl1506mx:1234@cluster0.5mhti9d.mongodb.net/Calendar";
 const MONGO_DB_NAME = "Calendar";
-const TOKEN_ACCESS = "EAAIfZAcqC9igBO94uMac2JIPQlBEGrBmpYAzkyl4OyinGJmpYgZBgwF1xCtgryeXhMw1ZBYmN6XvjrIfwPSvULpd8iNbrrT1T7DUJUIm2IrR0iw7vnyk4sKjwiVMlld6VbOmRgREZA5rOcQLPQr5bZA8whHL5wAWeNeZCorvDj4F3oZCesjdgbWYfwBv0ZCx2dcg7wZDZD";
+const TOKEN_ACCESS =
+  "EAAIfZAcqC9igBO94uMac2JIPQlBEGrBmpYAzkyl4OyinGJmpYgZBgwF1xCtgryeXhMw1ZBYmN6XvjrIfwPSvULpd8iNbrrT1T7DUJUIm2IrR0iw7vnyk4sKjwiVMlld6VbOmRgREZA5rOcQLPQr5bZA8whHL5wAWeNeZCorvDj4F3oZCesjdgbWYfwBv0ZCx2dcg7wZDZD";
 
 // Mapa para almacenar sesiones de usuarios
 const sesiones = new Map();
@@ -402,213 +404,245 @@ export const flowMotivoVisita = addKeyword("MOTIVO_VISITA_PACIENTE").addAnswer(
   }
 );
 
-export const flowObtenerCitas = addKeyword(['OBTENER_CITAS_PACIENTE']).addAction(
-  async (ctx, { flowDynamic }) => {
-    const idUsuario = ctx.from;
-    const datosUsuario = sesiones.get(idUsuario);
+export const flowObtenerCitas = addKeyword([
+  "OBTENER_CITAS_PACIENTE",
+]).addAction(async (ctx, { flowDynamic }) => {
+  const idUsuario = ctx.from;
+  const datosUsuario = sesiones.get(idUsuario);
 
-    let telefonoWhatsappform = idUsuario;
-    if (telefonoWhatsappform.length >= 13) {
-      const primerosDos = telefonoWhatsappform.substring(0, 2);
-      const restoNumero = telefonoWhatsappform.substring(3);
-      telefonoWhatsappform = primerosDos + restoNumero;
-    }
+  let telefonoWhatsappform = idUsuario;
+  if (telefonoWhatsappform.length >= 13) {
+    const primerosDos = telefonoWhatsappform.substring(0, 2);
+    const restoNumero = telefonoWhatsappform.substring(3);
+    telefonoWhatsappform = primerosDos + restoNumero;
+  }
 
-    try {
-      // Registrar datos del paciente
-      const response = await axios.post(
-        'http://localhost:5000/DentalArce/paciente',
-        {
-          nombre: datosUsuario.nombre,
-          telefonoPaciente: telefonoWhatsappform,
-          nombreReferido: datosUsuario.nombreReferido,
-          apeM: datosUsuario.apellidoMaterno,
-          apeP: datosUsuario.apellidoPaterno,
-          fechaNac: datosUsuario.fechaNac,
-          correoElectronico: datosUsuario.correoElectronico || null,
-          apodo: datosUsuario.apodo,
-          condicion: datosUsuario.condicion,
-          motivoVisita: datosUsuario.motivoVisita,
-          genero: datosUsuario.genero || null,
-          nombreTutor: datosUsuario.nombreTutor || null,
-          altura: datosUsuario.altura || null,
-          peso: datosUsuario.peso || null,
-          direccion: datosUsuario.direccion || null,
-          alergias: datosUsuario.alergias || null,
-          medicamentos: datosUsuario.medicamentos || null,
-          idDoctor: datosUsuario.idDoctor || null,
-          telefonoWhatsapp: idUsuario,
-        }
-      );
+  try {
+    // Registrar datos del paciente (mover el registro a una parte mas baja por ejemplo cuando ya registra la cita)
+    const response = await axios.post(
+      "http://localhost:5000/DentalArce/paciente",
+      {
+        nombre: datosUsuario.nombre,
+        telefonoPaciente: telefonoWhatsappform,
+        nombreReferido: datosUsuario.nombreReferido,
+        apeM: datosUsuario.apellidoMaterno,
+        apeP: datosUsuario.apellidoPaterno,
+        fechaNac: datosUsuario.fechaNac,
+        correoElectronico: datosUsuario.correoElectronico || null,
+        apodo: datosUsuario.apodo,
+        condicion: datosUsuario.condicion,
+        motivoVisita: datosUsuario.motivoVisita,
+        genero: datosUsuario.genero || null,
+        nombreTutor: datosUsuario.nombreTutor || null,
+        altura: datosUsuario.altura || null,
+        peso: datosUsuario.peso || null,
+        direccion: datosUsuario.direccion || null,
+        alergias: datosUsuario.alergias || null,
+        medicamentos: datosUsuario.medicamentos || null,
+        idDoctor: datosUsuario.idDoctor || null,
+        telefonoWhatsapp: idUsuario,
+      }
+    );
 
-      datosUsuario._id = response.data._id;
+    datosUsuario._id = response.data._id;
 
-      const esMasculino = datosUsuario.genero?.toLowerCase() === 'masculino';
-      const edad = datosUsuario.fechaNac
-        ? new Date().getFullYear() - new Date(datosUsuario.fechaNac).getFullYear()
-        : 0;
-      const esMenor = edad < 18;
+    const esMasculino = datosUsuario.genero?.toLowerCase() === "masculino";
+    const edad = datosUsuario.fechaNac
+      ? new Date().getFullYear() - new Date(datosUsuario.fechaNac).getFullYear()
+      : 0;
+    const esMenor = edad < 18;
 
-      await flowDynamic('¡Gracias por proporcionarnos tus datos! 😊');
+    await flowDynamic("¡Gracias por proporcionarnos tus datos! 😊");
 
-      if (esMasculino || esMenor) {
-        // Generar pago
-        try {
-          const pagoResponse = await axios.post('http://localhost:5000/DentalArce/pagos/registro', {
+    if (esMasculino || esMenor) {
+      // Generar pago
+      try {
+        const pagoResponse = await axios.post(
+          "http://localhost:5000/DentalArce/pagos/registro",
+          {
             pacienteId: datosUsuario._id,
             pacienteTel: idUsuario,
-          });
-
-          const recordatorioPago = new Date(pagoResponse.data.recordatorioPago);
-          const limitePago = new Date(pagoResponse.data.limitePago);
-
-          datosUsuario.urlPago = pagoResponse.data.urlPago;
-          datosUsuario.limitePago = limitePago;
-          datosUsuario.recordatorioPago = recordatorioPago;
-          datosUsuario.objectId = pagoResponse.data._id;
-
-          console.log('Datos del pago:', datosUsuario.urlPago, datosUsuario.limitePago, datosUsuario.objectId);
-
-          // Enviar link de pago y botones
-          await flowDynamic([
-            {
-              body: `💳 Aquí está tu enlace de pago: ${datosUsuario.urlPago}\n\n⏰ Tu pago vence el: ${limitePago.toLocaleString()}`,
-              buttons: [
-                { body: '✅ Ya pagué' },
-                { body: '❌ Cancelar' },
-              ],
-            },
-          ]);
-
-        } catch (error) {
-          console.error('Error al crear registro de pago:', error.response?.data || error.message);
-          await flowDynamic('Ocurrió un error al preparar tu pago. Por favor intenta nuevamente.');
-        }
-      } else {
-         await flowDynamic('¡Perfecto! Como no se requiere pago, vamos a mostrarte las citas disponibles. 🦷')
-         return ( flowCitasDisponibles);
-      }
-    } catch (error) {
-      console.error('Error al registrar los datos del paciente:', error.response?.data || error.message);
-      await flowDynamic('¡Oops! Algo salió mal al procesar la información. Por favor, intenta de nuevo más tarde. 🙏');
-    }
-  }
-);
-
-export const flowVerificarPago = addKeyword(['ya pagué', '✅ ya pagué', '🔁 Ya pagué'])
-  .addAction(async (ctx, { flowDynamic, gotoFlow }) => {
-    const idUsuario = ctx.from;
-    const datosUsuario = sesiones.get(idUsuario);
-
-    if (!datosUsuario?.objectId) {
-      await flowDynamic('No tengo registrado un pago pendiente para ti. Intenta obtener tus citas primero.');
-      return gotoFlow(flowObtenerCitas);
-    }
-
-    try {
-      const verificar = await axios.post(`http://localhost:5000/DentalArce/verificar-pago/${datosUsuario.objectId}`);
-      const estadoPago = verificar.data?.estado;
-
-      if (estadoPago === 'completado') {
-        await flowDynamic([
-          {
-            body: '✅ ¡Pago confirmado! Ahora puedes ver tus citas disponibles.',
           }
-        ]);
-        return gotoFlow(flowCitasDisponibles);
-      } else if (estadoPago === 'expirado') {
-        await flowDynamic([
-          {
-            body: '⛔ Tu sesión de pago ha expirado. Debes hacer el pago nuevamente.',
-            buttons: [
-              { body: '💳 Nuevo Cobro' }
-            ]
-          }
-        ]);
-        return gotoFlow(flowObtenerCitas);
-      } else {
-        await flowDynamic([
-          {
-            body: '⏳ El pago aún no se ha confirmado. Espera un momento y vuelve a responder con "Ya pagué".',
-            buttons: [
-              { body: '🔁 Ya pagué' }
-            ]
-          }
-        ]);
-      }      
-    } catch (err) {
-      console.error('❌ Error al verificar el pago:', err.message);
-      await flowDynamic('❌ Ocurrió un error al verificar tu pago. Intenta nuevamente más tarde.');
-    }
-  });
-
-
-  export const flowCancelarCita = addKeyword(['cancelar', '❌ cancelar', '💳 Nuevo Cobro'])
-  .addAction(async (ctx, { flowDynamic, gotoFlow }) => {
-    const idUsuario = ctx.from;
-    const datosUsuario = sesiones.get(idUsuario);
-
-    try {
-      if (!datosUsuario || !datosUsuario._id) {
-        await flowDynamic('⚠️ No se encontró tu información registrada. No hay nada que cancelar.');
-        return gotoFlow(welcomeFlow);
-      }
-
-      // Llamada al backend para eliminar por ID
-      const res = await axios.delete(`http://localhost:5000/DentalArce/paciente/${datosUsuario._id}`);
-      console.log('🗑️ Paciente eliminado:', res.data.eliminado);
-
-      await flowDynamic('✅ Has cancelado el proceso de agendar citas y se eliminó tu información. Si deseas retomarlo, solo escribe "Cita". 🦷');
-
-      // Redirigir al flujo principal
-      return gotoFlow(welcomeFlow);
-    } catch (error) {
-      console.error('❌ Error al cancelar y eliminar:', error.message);
-      await flowDynamic('Ocurrió un error al cancelar tu cita. Intenta de nuevo más tarde.');
-    }
-  });
-
-
-
-export const flowCitasDisponibles = addKeyword(['CITAS_DISPONIBLES', '📅 Ver citas']).addAction(
-  async (ctx, { flowDynamic, gotoFlow }) => {
-    try {
-      console.log("Solicitando las citas disponibles...");
-      const response = await axios.get(
-        "http://localhost:5000/DentalArce/getAvailableSlots/ce85ebbb918c7c7dfd7bad2eec6c142012d24c2b17e803e21b9d6cc98bb8472b"
-      );
-      const slots = response.data;
-      console.log("Citas encontradas:", slots);
-
-      if (slots.length === 0) {
-        await flowDynamic(
-          "❌ ¡Lo sentimos! Actualmente no hay citas disponibles. \n\nPor favor, intenta más tarde. 😔"
         );
-        return;
+
+        const recordatorioPago = new Date(pagoResponse.data.recordatorioPago);
+        const limitePago = new Date(pagoResponse.data.limitePago);
+
+        datosUsuario.urlPago = pagoResponse.data.urlPago;
+        datosUsuario.limitePago = limitePago;
+        datosUsuario.recordatorioPago = recordatorioPago;
+        datosUsuario.objectId = pagoResponse.data._id;
+
+        console.log(
+          "Datos del pago:",
+          datosUsuario.urlPago,
+          datosUsuario.limitePago,
+          datosUsuario.objectId
+        );
+
+        // Enviar link de pago y botones
+        await flowDynamic([
+          {
+            body: `💳 Aquí está tu enlace de pago: ${
+              datosUsuario.urlPago
+            }\n\n⏰ Tu pago vence el: ${limitePago.toLocaleString()}`,
+            buttons: [{ body: "✅ Ya pagué" }, { body: "❌ Cancelar" }],
+          },
+        ]);
+      } catch (error) {
+        console.error(
+          "Error al crear registro de pago:",
+          error.response?.data || error.message
+        );
+        await flowDynamic(
+          "Ocurrió un error al preparar tu pago. Por favor intenta nuevamente."
+        );
       }
-
-      const citasFormato = slots.map((slot, index) => ({
-        body: `🗓️ *${slot.day}* - ${slot.date} \n⏰ *De ${slot.start} a ${slot.end}*`,
-        buttons: [{ body: `${index + 1}` }],
-      }));
-
-      await flowDynamic(citasFormato);
-
-      const idUsuario = ctx.from;
-      if (!sesiones.has(idUsuario)) {
-        sesiones.set(idUsuario, {});
-      }
-      const datosUsuario = sesiones.get(idUsuario);
-      datosUsuario.slots = slots;
-      return gotoFlow(flowSeleccionarCita);
-    } catch (error) {
-      console.error("Error al obtener las citas disponibles:", error);
+    } else {
       await flowDynamic(
-        "⚠️ Hubo un error al obtener las citas. \n\nPor favor, intenta nuevamente más tarde. 🙏"
+        "¡Perfecto! Como no se requiere pago, vamos a mostrarte las citas disponibles. 🦷"
       );
+      return flowCitasDisponibles;
     }
+  } catch (error) {
+    console.error(
+      "Error al registrar los datos del paciente:",
+      error.response?.data || error.message
+    );
+    await flowDynamic(
+      "¡Oops! Algo salió mal al procesar la información. Por favor, intenta de nuevo más tarde. 🙏"
+    );
   }
-);
+});
+
+export const flowVerificarPago = addKeyword([
+  "ya pagué",
+  "✅ ya pagué",
+  "🔁 Ya pagué",
+]).addAction(async (ctx, { flowDynamic, gotoFlow }) => {
+  const idUsuario = ctx.from;
+  const datosUsuario = sesiones.get(idUsuario);
+
+  if (!datosUsuario?.objectId) {
+    await flowDynamic(
+      "No tengo registrado un pago pendiente para ti. Intenta obtener tus citas primero."
+    );
+    return gotoFlow(flowObtenerCitas);
+  }
+
+  try {
+    const verificar = await axios.post(
+      `http://localhost:5000/DentalArce/verificar-pago/${datosUsuario.objectId}`
+    );
+    const estadoPago = verificar.data?.estado;
+
+    if (estadoPago === "completado") {
+      await flowDynamic([
+        {
+          body: "✅ ¡Pago confirmado! Ahora puedes ver tus citas disponibles.",
+        },
+      ]);
+      return gotoFlow(flowCitasDisponibles);
+    } else if (estadoPago === "expirado") {
+      await flowDynamic([
+        {
+          body: "⛔ Tu sesión de pago ha expirado. Debes hacer el pago nuevamente.",
+          buttons: [{ body: "💳 Nuevo Cobro" }],
+        },
+      ]);
+      return gotoFlow(flowObtenerCitas);
+    } else {
+      await flowDynamic([
+        {
+          body: '⏳ El pago aún no se ha confirmado. Espera un momento y vuelve a responder con "Ya pagué".',
+          buttons: [{ body: "🔁 Ya pagué" }],
+        },
+      ]);
+    }
+  } catch (err) {
+    console.error("❌ Error al verificar el pago:", err.message);
+    await flowDynamic(
+      "❌ Ocurrió un error al verificar tu pago. Intenta nuevamente más tarde."
+    );
+  }
+});
+
+export const flowCancelarCita = addKeyword([
+  "cancelar",
+  "❌ cancelar",
+  "💳 Nuevo Cobro",
+]).addAction(async (ctx, { flowDynamic, gotoFlow }) => {
+  const idUsuario = ctx.from;
+  const datosUsuario = sesiones.get(idUsuario);
+
+  try {
+    if (!datosUsuario || !datosUsuario._id) {
+      await flowDynamic(
+        "⚠️ No se encontró tu información registrada. No hay nada que cancelar."
+      );
+      return gotoFlow(welcomeFlow);
+    }
+
+    // Llamada al backend para eliminar por ID
+    const res = await axios.delete(
+      `http://localhost:5000/DentalArce/paciente/${datosUsuario._id}`
+    );
+    console.log("🗑️ Paciente eliminado:", res.data.eliminado);
+
+    await flowDynamic(
+      '✅ Has cancelado el proceso de agendar citas y se eliminó tu información. Si deseas retomarlo, solo escribe "Cita". 🦷'
+    );
+
+    // Redirigir al flujo principal
+    return gotoFlow(welcomeFlow);
+  } catch (error) {
+    console.error("❌ Error al cancelar y eliminar:", error.message);
+    await flowDynamic(
+      "Ocurrió un error al cancelar tu cita. Intenta de nuevo más tarde."
+    );
+  }
+});
+
+export const flowCitasDisponibles = addKeyword([
+  "CITAS_DISPONIBLES",
+  "📅 Ver citas",
+]).addAction(async (ctx, { flowDynamic, gotoFlow }) => {
+  try {
+    console.log("Solicitando las citas disponibles...");
+    const response = await axios.get(
+      "http://localhost:5000/DentalArce/getAvailableSlots/ce85ebbb918c7c7dfd7bad2eec6c142012d24c2b17e803e21b9d6cc98bb8472b"
+    );
+    const slots = response.data;
+    console.log("Citas encontradas:", slots);
+
+    if (slots.length === 0) {
+      await flowDynamic(
+        "❌ ¡Lo sentimos! Actualmente no hay citas disponibles. \n\nPor favor, intenta más tarde. 😔"
+      );
+      return;
+    }
+
+    const citasFormato = slots.map((slot, index) => ({
+      body: `🗓️ *${slot.day}* - ${slot.date} \n⏰ *De ${slot.start} a ${slot.end}*`,
+      buttons: [{ body: `${index + 1}` }],
+    }));
+
+    await flowDynamic(citasFormato);
+
+    const idUsuario = ctx.from;
+    if (!sesiones.has(idUsuario)) {
+      sesiones.set(idUsuario, {});
+    }
+    const datosUsuario = sesiones.get(idUsuario);
+    datosUsuario.slots = slots;
+    return gotoFlow(flowSeleccionarCita);
+  } catch (error) {
+    console.error("Error al obtener las citas disponibles:", error);
+    await flowDynamic(
+      "⚠️ Hubo un error al obtener las citas. \n\nPor favor, intenta nuevamente más tarde. 🙏"
+    );
+  }
+});
 
 export const flowSeleccionarCita = addKeyword("SELECCIONAR_CITA").addAnswer(
   "¡Genial! Por favor, elige el número de la cita que prefieras de la lista de opciones:",
@@ -674,11 +708,11 @@ export const flowReservarCita = addKeyword("RESERVAR_CITA").addAction(
 
       // Formatear la fecha de vuelta al formato ISO sin cambiar la zona horaria
       const year = dateObj.getFullYear();
-      const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-      const day = String(dateObj.getDate()).padStart(2, '0');
-      const hours = String(dateObj.getHours()).padStart(2, '0');
-      const minutes = String(dateObj.getMinutes()).padStart(2, '0');
-      const seconds = String(dateObj.getSeconds()).padStart(2, '0');
+      const month = String(dateObj.getMonth() + 1).padStart(2, "0");
+      const day = String(dateObj.getDate()).padStart(2, "0");
+      const hours = String(dateObj.getHours()).padStart(2, "0");
+      const minutes = String(dateObj.getMinutes()).padStart(2, "0");
+      const seconds = String(dateObj.getSeconds()).padStart(2, "0");
 
       return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
     };
