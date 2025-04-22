@@ -434,8 +434,8 @@ export const flowObtenerCitas = addKeyword(['OBTENER_CITAS_PACIENTE']).addAction
           altura: datosUsuario.altura || null,
           peso: datosUsuario.peso || null,
           direccion: datosUsuario.direccion || null,
-          alergias: datosUsuario.alergias || null,
-          medicamentos: datosUsuario.medicamentos || null,
+          alergias: datosUsuario.alergias,
+          medicamentos: datosUsuario.medicamentos ,
           idDoctor: datosUsuario.idDoctor || null,
           telefonoWhatsapp: idUsuario,
         }
