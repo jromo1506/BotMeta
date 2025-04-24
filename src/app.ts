@@ -406,7 +406,7 @@ export const flowMotivoVisita = addKeyword("MOTIVO_VISITA_PACIENTE").addAnswer(
 
 export const flowObtenerCitas = addKeyword([
   "OBTENER_CITAS_PACIENTE",
-]).addAction(async (ctx, { flowDynamic }) => {
+]).addAction(async (ctx, { flowDynamic, gotoFlow }) => {
   const idUsuario = ctx.from;
   const datosUsuario = sesiones.get(idUsuario);
 
@@ -502,7 +502,7 @@ export const flowObtenerCitas = addKeyword([
       await flowDynamic(
         "¡Perfecto! Como no se requiere pago, vamos a mostrarte las citas disponibles. 🦷"
       );
-      return flowCitasDisponibles;
+      return gotoFlow (flowCitasDisponibles);
     }
   } catch (error) {
     console.error(
@@ -550,7 +550,7 @@ export const flowVerificarPago = addKeyword([
           buttons: [{ body: "💳 Nuevo Cobro" }],
         },
       ]);
-      return gotoFlow(flowObtenerCitas);
+      return gotoFlow(flowCancelarCita);
     } else {
       await flowDynamic([
         {
