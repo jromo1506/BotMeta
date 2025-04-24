@@ -750,14 +750,27 @@ export const flowReservarCita = addKeyword("RESERVAR_CITA").addAction(
           idsCitas: [datosUsuario.event1Id, datosUsuario.event2Id],
           recordatorioCita: recordatorioDateTime,
           enviado: env,
+          recordatorioCitaDiciembre: startDateTime,
+          enviadoCitaDiciembre: env
         }
       );
 
       console.log("Confirmación de paciente cita", respons.data);
 
       await flowDynamic(
-        `¡Tu cita ha sido reservada exitosamente para el ${datosUsuario.horario}! 🎉 Te esperamos.`
-      );
+        `¡Tu cita ha sido reservada exitosamente para el ${datosUsuario.horario}! 🎉 Te esperamos.\n\n` +
+        `¡Su opinión es muy valiosa para nosotros, ${datosUsuario.nombre}! \n` +
+        `⭐⭐⭐⭐⭐ \n` +
+        `Nos encantaría que pudiera compartir su experiencia en Google y \n` +
+        `Facebook para ayudarnos a crecer como comunidad, y que más \n` +
+        `personas confíen en nuestro trabajo 💙.\n\n` +
+        `Google Dr. Arce: https://g.co/kgs/QUuJb5g \n` +
+        `Google DCB: https://maps.app.goo.gl/1dCP9hepbk7m2dnq9?g_st=iw \n` +
+        `Facebook: https://www.facebook.com/dr.arce/reviews \n\n` +
+        `En su próxima visita, no olvide mencionar que dejó su opinión en nuestras \n` +
+        `redes, y con gusto le daremos un obsequio de parte de todo nuestro \n` +
+        `equipo 💝`
+    );
     } catch (error) {
       console.error("Error al reservar la cita:", error);
       await flowDynamic(
