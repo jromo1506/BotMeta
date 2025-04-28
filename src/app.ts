@@ -101,6 +101,24 @@ export const flowNombrePacienteMenor = addKeyword(
     if (!datosUsuario.nombre) {
       return fallBack("❌ Por favor, ingresa un nombre válido.");
     } else {
+      return gotoFlow(flowTelefono); // Avanza al siguiente paso
+    }
+  }
+);
+
+export const flowTelefono = addKeyword("TELEFONO_PACIENTE").addAnswer(
+  "¿Cuál es tu número telefónico del tutor? 📞",
+  { capture: true },
+  async (ctx, { fallBack, gotoFlow }) => {
+    const idUsuario = ctx.from;
+    const datosUsuario = sesiones.get(idUsuario);
+    datosUsuario.telefono = ctx.body.trim();
+    console.log(`Número telefónico (${idUsuario}): ${datosUsuario.telefono}`);
+
+    const phoneRegex = /^\d{10}$/;
+    if (!phoneRegex.test(datosUsuario.telefono)) {
+      return fallBack("❌ Por favor, ingresa un número de teléfono válido.");
+    } else {
       return gotoFlow(flowmenorejemplo); // Avanza al siguiente paso
     }
   }
@@ -362,28 +380,12 @@ export const flowCondicionMedica = addKeyword("CONDICION_PACIENTE").addAnswer(
     if (!datosUsuario.condicion) {
       return fallBack("❌ Por favor, ingresa una condición válida.");
     } else {
-      return gotoFlow(flowTelefono); // Avanza al siguiente paso
-    }
-  }
-);
-
-export const flowTelefono = addKeyword("TELEFONO_PACIENTE").addAnswer(
-  "¿Cuál es tu número telefónico? 📞",
-  { capture: true },
-  async (ctx, { fallBack, gotoFlow }) => {
-    const idUsuario = ctx.from;
-    const datosUsuario = sesiones.get(idUsuario);
-    datosUsuario.telefono = ctx.body.trim();
-    console.log(`Número telefónico (${idUsuario}): ${datosUsuario.telefono}`);
-
-    const phoneRegex = /^\d{10}$/;
-    if (!phoneRegex.test(datosUsuario.telefono)) {
-      return fallBack("❌ Por favor, ingresa un número de teléfono válido.");
-    } else {
       return gotoFlow(flowMotivoVisita); // Avanza al siguiente paso
     }
   }
 );
+
+
 
 export const flowMotivoVisita = addKeyword("MOTIVO_VISITA_PACIENTE").addAnswer(
   "¿Cuál es el motivo de tu visita? 🏥",
@@ -423,7 +425,7 @@ export const flowObtenerCitas = addKeyword([
         'http://localhost:5000/DentalArce/paciente',
         {
           nombre: datosUsuario.nombre,
-          telefonoPaciente: telefonoWhatsappform,
+          telefonoPaciente: telefonoWhatsappform || null,
           nombreReferido: datosUsuario.nombreReferido,
           apeM: datosUsuario.apellidoMaterno,
           apeP: datosUsuario.apellidoPaterno,
