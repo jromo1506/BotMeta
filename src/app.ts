@@ -819,7 +819,7 @@ const flowDocs = addKeyword("Agendar")
     flowMensajeUrgente,
   ]);
 
-const welcomeFlow = addKeyword(["hola", "ole", "alo", "inicio", "Cita", "cita"])
+const welcomeFlow = addKeyword(["hola", "ole", "alo", "inicio", "Cita", "cita", "Doctor"])
   .addAnswer(
     "🙌 ¡Hola, bienvenido a Dental Clinic Boutique! 😊",
     null,
