@@ -701,25 +701,32 @@ export const flowReservarCita = addKeyword("RESERVAR_CITA").addAction(
     const startDateTime = `${date}T${startTime}:00`;
     const endDateTime = `${date}T${endTime}:00`;
 
-    // Función para calcular la fecha de recordatorio (un día antes)
+    // Función para calcular la fecha de recordatorio (2 días antes)
     const calcularRecordatorio = (dateTimeStr) => {
       const dateObj = new Date(dateTimeStr);
-
-      // Restar un día
-      dateObj.setDate(dateObj.getDate() - 1);
-
-      // Formatear la fecha de vuelta al formato ISO sin cambiar la zona horaria
-      const year = dateObj.getFullYear();
-      const month = String(dateObj.getMonth() + 1).padStart(2, "0");
-      const day = String(dateObj.getDate()).padStart(2, "0");
-      const hours = String(dateObj.getHours()).padStart(2, "0");
-      const minutes = String(dateObj.getMinutes()).padStart(2, "0");
-      const seconds = String(dateObj.getSeconds()).padStart(2, "0");
-
-      return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+      dateObj.setDate(dateObj.getDate() - 2);
+      dateObj.setHours(9, 0, 0, 0); // Fijar hora específica para recordatorios (ej. 9 AM)
+      return dateObj.toISOString();
     };
 
     const recordatorioDateTime = calcularRecordatorio(startDateTime);
+
+    // Formatear fecha en "DD/MM/AAAA"
+    const [year, month, day] = date.split('-');
+    const fechaCitaFormateada = `${day}/${month}/${year}`;
+
+    // Separar hora y determinar AM/PM
+    const [horaStr, minutoStr] = startTime.split(':');
+    const hora = parseInt(horaStr, 10);
+    let ampm = 'am';
+    let horaFormateada = startTime;
+    
+    if (hora >= 12) {
+      ampm = 'pm';
+      if (hora > 12) {
+        horaFormateada = `${hora - 12}:${minutoStr}`;
+      }
+    }
 
     try {
       const response = await axios.post(
@@ -732,6 +739,7 @@ export const flowReservarCita = addKeyword("RESERVAR_CITA").addAction(
         }
       );
 
+      console.log("fecha de incio:", startDateTime);
       console.log("Confirmación de reserva:", response.data);
 
       // Guardar los IDs de los eventos en la sesión del usuario
@@ -751,6 +759,9 @@ export const flowReservarCita = addKeyword("RESERVAR_CITA").addAction(
           pacienteId: datosUsuario._id,
           idsCitas: [datosUsuario.event1Id, datosUsuario.event2Id],
           recordatorioCita: recordatorioDateTime,
+          fechaCita: fechaCitaFormateada,
+          horaCita: horaFormateada,
+          ampm: ampm,
           enviado: env,
         }
       );
