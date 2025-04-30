@@ -39,109 +39,6 @@ const TOKEN_ACCESS =
 // Mapa para almacenar sesiones de usuarios
 const sesiones = new Map();
 
-//-----------------------------------FLOW PACIENTE MENOR--------------------------------\\
-
-export const flowAgendarCitaMenor = addKeyword("Paciente menor").addAnswer(
-  "¡Bienvenido! Nos puede compartir la siguiente información para poder abrir su expediente clínico y reservar un espacio en nuestra agenda. 😊\n\n👤 ¿Cuál es el apellido paterno del paciente?",
-  { capture: true },
-  async (ctx, { fallBack, gotoFlow }) => {
-    const idUsuario = ctx.from;
-
-    if (!sesiones.has(idUsuario)) {
-      sesiones.set(idUsuario, {});
-    }
-
-    const datosUsuario = sesiones.get(idUsuario);
-    console.log(datosUsuario);
-
-    datosUsuario.apellidoPaterno = ctx.body.trim();
-    console.log(
-      `Apellido registrado (${idUsuario}): ${datosUsuario.apellidoPaterno}`
-    );
-
-    if (!datosUsuario.apellidoPaterno) {
-      return fallBack("❌ Por favor, ingresa un apellido paterno válido.");
-    } else {
-      return gotoFlow(flowApellidoMenor); // Avanza al siguiente paso
-    }
-  }
-);
-
-export const flowApellidoMenor = addKeyword("APELLIDO_MATERNO_M").addAnswer(
-  "¿Apellido materno del paciente? 👤",
-  { capture: true },
-  async (ctx, { fallBack, gotoFlow }) => {
-    const idUsuario = ctx.from;
-
-    const datosUsuario = sesiones.get(idUsuario);
-    datosUsuario.apellidoMaterno = ctx.body.trim();
-    console.log(
-      `Apellido Materno (${idUsuario}): ${datosUsuario.apellidoMaterno}`
-    );
-
-    if (!datosUsuario.apellidoMaterno) {
-      return fallBack("❌ Por favor, ingresa un apellido materno válido.");
-    } else {
-      return gotoFlow(flowNombrePacienteMenor); // Avanza al siguiente paso
-    }
-  }
-);
-
-export const flowNombrePacienteMenor = addKeyword(
-  "NOMBRE_PACIENTE_M"
-).addAnswer(
-  "¿Nombre del paciente? 👤",
-  { capture: true },
-  async (ctx, { fallBack, gotoFlow }) => {
-    const idUsuario = ctx.from;
-    const datosUsuario = sesiones.get(idUsuario);
-    datosUsuario.nombre = ctx.body.trim();
-    console.log(`Nombre (${idUsuario}): ${datosUsuario.nombre}`);
-
-    if (!datosUsuario.nombre) {
-      return fallBack("❌ Por favor, ingresa un nombre válido.");
-    } else {
-      return gotoFlow(flowTelefono); // Avanza al siguiente paso
-    }
-  }
-);
-
-export const flowTelefono = addKeyword("TELEFONO_PACIENTE").addAnswer(
-  "¿Cuál es tu número telefónico del tutor? 📞",
-  { capture: true },
-  async (ctx, { fallBack, gotoFlow }) => {
-    const idUsuario = ctx.from;
-    const datosUsuario = sesiones.get(idUsuario);
-    datosUsuario.telefono = ctx.body.trim();
-    console.log(`Número telefónico (${idUsuario}): ${datosUsuario.telefono}`);
-
-    const phoneRegex = /^\d{10}$/;
-    if (!phoneRegex.test(datosUsuario.telefono)) {
-      return fallBack("❌ Por favor, ingresa un número de teléfono válido.");
-    } else {
-      return gotoFlow(flowmenorejemplo); // Avanza al siguiente paso
-    }
-  }
-);
-
-export const flowmenorejemplo = addKeyword("NOMBRE_TUTOR").addAnswer(
-  "¿Nombre de padre, madre o tutor? 👤",
-  { capture: true },
-  async (ctx, { fallBack, gotoFlow }) => {
-    const idUsuario = ctx.from;
-
-    const datosUsuario = sesiones.get(idUsuario);
-    datosUsuario.nombreTutor = ctx.body.trim();
-    console.log(`Apellido Materno (${idUsuario}): ${datosUsuario.nombreTutor}`);
-
-    if (!datosUsuario.nombreTutor) {
-      return fallBack("❌ Por favor, ingresa un apellido materno válido.");
-    } else {
-      return gotoFlow(flowGeneroPaciente); // Avanza al siguiente paso
-    }
-  }
-);
-
 //-----------------------------------FLOW PACIENTE MAYOR--------------------------------\\
 
 export const flowAgendarCitaMayor = addKeyword("Paciente mayor").addAnswer(
@@ -206,8 +103,6 @@ export const flowNombrePaciente = addKeyword("NOMBRE_PACIENTE").addAnswer(
     }
   }
 );
-
-//-----------------------------------FLOW CONJUNTO--------------------------------\\
 
 export const flowGeneroPaciente = addKeyword("GENERO_PACIENTE")
   .addAnswer(
@@ -385,8 +280,6 @@ export const flowCondicionMedica = addKeyword("CONDICION_PACIENTE").addAnswer(
   }
 );
 
-
-
 export const flowMotivoVisita = addKeyword("MOTIVO_VISITA_PACIENTE").addAnswer(
   "¿Cuál es el motivo de tu visita? 🏥",
   { capture: true },
@@ -419,44 +312,39 @@ export const flowObtenerCitas = addKeyword([
     telefonoWhatsappform = primerosDos + restoNumero;
   }
 
-    try {
-      // Registrar datos del paciente
-      const response = await axios.post(
-        'http://localhost:5000/DentalArce/paciente',
-        {
-          nombre: datosUsuario.nombre,
-          telefonoPaciente: telefonoWhatsappform || null,
-          nombreReferido: datosUsuario.nombreReferido,
-          apeM: datosUsuario.apellidoMaterno,
-          apeP: datosUsuario.apellidoPaterno,
-          fechaNac: datosUsuario.fechaNac,
-          correoElectronico: datosUsuario.correoElectronico || null,
-          apodo: datosUsuario.apodo,
-          condicion: datosUsuario.condicion,
-          motivoVisita: datosUsuario.motivoVisita,
-          genero: datosUsuario.genero || null,
-          nombreTutor: datosUsuario.nombreTutor || null,
-          altura: datosUsuario.altura || null,
-          peso: datosUsuario.peso || null,
-          direccion: datosUsuario.direccion || null,
-          alergias: datosUsuario.alergias,
-          medicamentos: datosUsuario.medicamentos ,
-          idDoctor: datosUsuario.idDoctor || null,
-          telefonoWhatsapp: idUsuario,
-        }
-      );
+  try {
+    // Registrar datos del paciente
+    const response = await axios.post(
+      "http://localhost:5000/DentalArce/paciente",
+      {
+        nombre: datosUsuario.nombre,
+        telefonoPaciente: telefonoWhatsappform || null,
+        nombreReferido: datosUsuario.nombreReferido,
+        apeM: datosUsuario.apellidoMaterno,
+        apeP: datosUsuario.apellidoPaterno,
+        fechaNac: datosUsuario.fechaNac,
+        correoElectronico: datosUsuario.correoElectronico || null,
+        apodo: datosUsuario.apodo,
+        condicion: datosUsuario.condicion,
+        genero: datosUsuario.genero || null,
+        nombreTutor: datosUsuario.nombreTutor || null,
+        altura: datosUsuario.altura || null,
+        peso: datosUsuario.peso || null,
+        direccion: datosUsuario.direccion || null,
+        alergias: datosUsuario.alergias,
+        medicamentos: datosUsuario.medicamentos,
+        idDoctor: datosUsuario.idDoctor || null,
+        telefonoWhatsapp: idUsuario,
+      }
+    );
 
     datosUsuario._id = response.data._id;
 
     const esMasculino = datosUsuario.genero?.toLowerCase() === "masculino";
-    const edad = datosUsuario.fechaNac
-      ? new Date().getFullYear() - new Date(datosUsuario.fechaNac).getFullYear()
-      : 0;
-    const esMenor = edad < 18;
 
     await flowDynamic("¡Gracias por proporcionarnos tus datos! 😊");
 
-    if (esMasculino || esMenor) {
+    if (esMasculino) {
       // Generar pago
       try {
         const pagoResponse = await axios.post(
@@ -504,7 +392,7 @@ export const flowObtenerCitas = addKeyword([
       await flowDynamic(
         "¡Perfecto! Como no se requiere pago, vamos a mostrarte las citas disponibles. 🦷"
       );
-      return gotoFlow (flowCitasDisponibles);
+      return gotoFlow(flowCitasDisponibles);
     }
   } catch (error) {
     console.error(
@@ -694,6 +582,14 @@ export const flowReservarCita = addKeyword("RESERVAR_CITA").addAction(
       return;
     }
 
+    let telefonoWhatsappform = idUsuario;
+    if (telefonoWhatsappform.length >= 13) {
+      const primerosDos = telefonoWhatsappform.substring(0, 2);
+      const restoNumero = telefonoWhatsappform.substring(3);
+      telefonoWhatsappform = primerosDos + restoNumero;
+    }
+    
+
     const date = selectedSlot.split(" ")[1];
     const startTime = selectedSlot.split(" ")[3];
     const endTime = selectedSlot.split(" ")[5];
@@ -712,17 +608,17 @@ export const flowReservarCita = addKeyword("RESERVAR_CITA").addAction(
     const recordatorioDateTime = calcularRecordatorio(startDateTime);
 
     // Formatear fecha en "DD/MM/AAAA"
-    const [year, month, day] = date.split('-');
+    const [year, month, day] = date.split("-");
     const fechaCitaFormateada = `${day}/${month}/${year}`;
 
     // Separar hora y determinar AM/PM
-    const [horaStr, minutoStr] = startTime.split(':');
+    const [horaStr, minutoStr] = startTime.split(":");
     const hora = parseInt(horaStr, 10);
-    let ampm = 'am';
+    let ampm = "am";
     let horaFormateada = startTime;
-    
+
     if (hora >= 12) {
-      ampm = 'pm';
+      ampm = "pm";
       if (hora > 12) {
         horaFormateada = `${hora - 12}:${minutoStr}`;
       }
@@ -810,13 +706,10 @@ const flowDocs = addKeyword("Agendar")
           body: "🤔 Le gustaría reservar una consulta para: ",
           buttons: [
             {
-              body: "Paciente menor ",
-            },
-            {
               body: "Paciente mayor",
             },
             {
-              body: "No agendar cita ",
+              body: "No agendar cita",
             },
           ],
         },
@@ -825,12 +718,19 @@ const flowDocs = addKeyword("Agendar")
   )
   .addAnswer(["Por favor, selecciona una opción."], null, null, [
     flowAgendarCitaMayor,
-    flowAgendarCitaMenor,
     flowNoAgendar,
     flowMensajeUrgente,
   ]);
 
-const welcomeFlow = addKeyword(["hola", "ole", "alo", "inicio", "Cita", "cita", "Doctor"])
+const welcomeFlow = addKeyword([
+  "hola",
+  "ole",
+  "alo",
+  "inicio",
+  "Cita",
+  "cita",
+  "Doctor",
+])
   .addAnswer(
     "🙌 ¡Hola, bienvenido a Dental Clinic Boutique! 😊",
     null,
@@ -918,10 +818,6 @@ const main = async () => {
     flowReferidoFemenino,
     flowReservarCita,
     flowSeleccionarCita,
-    flowTelefono,
-    flowApellidoMenor,
-    flowNombrePacienteMenor,
-    flowmenorejemplo,
     flowTenerCorreo,
     flowVerificarPago,
     flowCancelarCita,
