@@ -194,22 +194,63 @@ export const flowReferidoFemenino = addKeyword("Femenino").addAnswer(
 export const flowFechaNacimiento = addKeyword(
   "FECHA_NACIMIENTO_PACIENTE"
 ).addAnswer(
-  "¿Cuál es su fecha de nacimiento? (Formato: YYYY-MM-DD) 🗓️",
+  "¿Cuál es su fecha de nacimiento? (Formato: DD/MM/YYYY) 🗓️",
   { capture: true },
   async (ctx, { fallBack, gotoFlow }) => {
     const idUsuario = ctx.from;
     const datosUsuario = sesiones.get(idUsuario);
-    datosUsuario.fechaNac = ctx.body.trim();
-    console.log(`Fecha de Nacimiento (${idUsuario}): ${datosUsuario.fechaNac}`);
-
-    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-    if (!dateRegex.test(datosUsuario.fechaNac)) {
+    const fechaIngresada = ctx.body.trim();
+    
+    // Validar formato DD/MM/YYYY
+    const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
+    if (!dateRegex.test(fechaIngresada)) {
       return fallBack(
-        "❌ Por favor, ingresa una fecha válida en el formato YYYY-MM-DD."
+        "❌ Por favor, ingresa una fecha válida en el formato DD/MM/YYYY."
       );
-    } else {
-      return gotoFlow(flowTenerCorreo); // Avanza al siguiente paso
     }
+    
+    // Convertir a YYYY-MM-DD
+    const [dia, mes, anio] = fechaIngresada.split('/');
+    const fechaFormatoCorrecto = `${anio}-${mes}-${dia}`;
+    
+    // Validar que sea una fecha real
+    const fechaNac = new Date(fechaFormatoCorrecto);
+    if (isNaN(fechaNac.getTime())) {
+      return fallBack(
+        "❌ La fecha ingresada no es válida. Por favor ingresa una fecha real en formato DD/MM/YYYY."
+      );
+    }
+    
+    // Calcular edad
+    const hoy = new Date();
+    let edad = hoy.getFullYear() - fechaNac.getFullYear();
+    const mesActual = hoy.getMonth();
+    const mesNacimiento = fechaNac.getMonth();
+    
+    // Ajustar edad si aún no ha pasado el mes de cumpleaños
+    if (mesActual < mesNacimiento || 
+        (mesActual === mesNacimiento && hoy.getDate() < fechaNac.getDate())) {
+      edad--;
+    }
+    
+    // Validar rango de edad
+    if (edad < 18) {
+      return fallBack(
+        "❌ Lo siento, debes ser mayor de 18 años para continuar."
+      );
+    }
+    
+    if (edad > 100) {
+      return fallBack(
+        "❌ La edad ingresada no parece válida. Por favor verifica tu fecha de nacimiento."
+      );
+    }
+    
+    // Guardar fecha en formato YYYY-MM-DD
+    datosUsuario.fechaNac = fechaFormatoCorrecto;
+    console.log(`Fecha de Nacimiento (${idUsuario}): ${datosUsuario.fechaNac}`);
+    
+    return gotoFlow(flowTenerCorreo); // Avanza al siguiente paso
   }
 );
 
@@ -313,7 +354,7 @@ export const flowObtenerCitas = addKeyword([
   }
 
   try {
-    // Registrar datos del paciente
+    // Registrar datos del paciente (resto del código original)
     const response = await axios.post(
       "http://localhost:5000/DentalArce/paciente",
       {
@@ -346,6 +387,45 @@ export const flowObtenerCitas = addKeyword([
 
     if (esMasculino) {
       // Generar pago
+      // Primero mostramos las citas disponibles actuales
+      await flowDynamic(
+        "🔍 Recuperando las citas disponibles en este momento..."
+      );
+
+      try {
+        const responseCitas = await axios.get(
+          "http://localhost:5000/DentalArce/getAvailableSlots/ce85ebbb918c7c7dfd7bad2eec6c142012d24c2b17e803e21b9d6cc98bb8472b"
+        );
+        const slots = responseCitas.data;
+
+        if (slots.length > 0) {
+          const mensajeCitas = slots
+            .map(
+              (slot) =>
+                `🗓️ *${slot.day}* - ${slot.date} \n⏰ a las ${slot.start}`
+            )
+            .join("\n\n");
+
+          await flowDynamic([
+            {
+              body: `Estas son las citas disponibles en este momento:\n\n${mensajeCitas}\n\n⚠️ Importante: Si tardas en realizar el pago, estas citas podrían no estar disponibles al finalizar. En ese caso, se te mostrarán las nuevas opciones disponibles.`,
+            },
+          ]);
+
+          // Guardamos las citas en la sesión por si acaso
+          datosUsuario.slotsPreview = slots;
+        } else {
+          await flowDynamic(
+            "Actualmente no hay citas disponibles. Por favor, intenta más tarde."
+          );
+        }
+      } catch (error) {
+        console.error("Error al obtener citas previas:", error);
+        await flowDynamic(
+          "No pude recuperar las citas disponibles en este momento. Continuaremos con el proceso de pago."
+        );
+      }
+
       try {
         const pagoResponse = await axios.post(
           "http://localhost:5000/DentalArce/pagos/registro",
@@ -513,7 +593,7 @@ export const flowCitasDisponibles = addKeyword([
     }
 
     const citasFormato = slots.map((slot, index) => ({
-      body: `🗓️ *${slot.day}* - ${slot.date} \n⏰ *De ${slot.start} a ${slot.end}*`,
+      body: `🗓️ *${slot.day}* - ${slot.date} \n⏰ *a las ${slot.start}*`,
       buttons: [{ body: `${index + 1}` }],
     }));
 
@@ -581,14 +661,6 @@ export const flowReservarCita = addKeyword("RESERVAR_CITA").addAction(
       );
       return;
     }
-
-    let telefonoWhatsappform = idUsuario;
-    if (telefonoWhatsappform.length >= 13) {
-      const primerosDos = telefonoWhatsappform.substring(0, 2);
-      const restoNumero = telefonoWhatsappform.substring(3);
-      telefonoWhatsappform = primerosDos + restoNumero;
-    }
-    
 
     const date = selectedSlot.split(" ")[1];
     const startTime = selectedSlot.split(" ")[3];
@@ -697,7 +769,7 @@ const flowDocs = addKeyword("Agendar")
       "* Plan de pagos\n",
       "📆 Duración: 1 hora 30 minutos",
       "💰 Costo: $750.00 MXN\n\n",
-      "➡️ Nuestra atención a pacientes es a partir de los 15 años de edad. \n",
+      "➡️ Nuestra atención a pacientes es a partir de los 18 años de edad. \n",
     ],
     null,
     async (ctx, { flowDynamic }) => {
@@ -749,7 +821,7 @@ const welcomeFlow = addKeyword([
           await flowDynamic([
             {
               body:
-                `¡Hola, ${paciente.nombre}! 👋\n\n` +
+                `¡Hola, ${paciente.apodo}! 👋\n\n` +
                 `Nos alegra verte de nuevo. Parece que ya estás registrado en nuestro sistema. 😊\n\n`,
             },
             {
