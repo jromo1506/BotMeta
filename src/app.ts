@@ -368,7 +368,6 @@ export const flowObtenerCitas = addKeyword([
         apodo: datosUsuario.apodo,
         condicion: datosUsuario.condicion,
         genero: datosUsuario.genero || null,
-        nombreTutor: datosUsuario.nombreTutor || null,
         altura: datosUsuario.altura || null,
         peso: datosUsuario.peso || null,
         direccion: datosUsuario.direccion || null,
@@ -615,7 +614,7 @@ export const flowCitasDisponibles = addKeyword([
 });
 
 export const flowSeleccionarCita = addKeyword("SELECCIONAR_CITA").addAnswer(
-  "¡Genial! Por favor, elige el número de la cita que prefieras de la lista de opciones:",
+  "Por favor, elige el número de la cita que prefieras de la lista de opciones:",
   { capture: true },
   async (ctx, { fallBack, flowDynamic, gotoFlow }) => {
     const idUsuario = ctx.from;
@@ -626,7 +625,7 @@ export const flowSeleccionarCita = addKeyword("SELECCIONAR_CITA").addAnswer(
       await flowDynamic(
         "Parece que no hay citas disponibles en este momento o se perdió la información. Intenta de nuevo. 😕"
       );
-      return;
+      return gotoFlow(flowCitasDisponibles);
     }
 
     const userInput = ctx.body.trim();
@@ -639,18 +638,76 @@ export const flowSeleccionarCita = addKeyword("SELECCIONAR_CITA").addAnswer(
     }
 
     const selectedSlot = slots[userChoice - 1];
-    datosUsuario.horario = `${selectedSlot.day} ${selectedSlot.date} de ${selectedSlot.start} a ${selectedSlot.end}`;
-    console.log(
-      `Usuario (${idUsuario}) seleccionó la cita:`,
-      datosUsuario.horario
-    );
+    
+    // Primero validamos si la cita sigue disponible
+    try {
+      const response = await axios.get(
+        "http://localhost:5000/DentalArce/getAvailableSlots/ce85ebbb918c7c7dfd7bad2eec6c142012d24c2b17e803e21b9d6cc98bb8472b"
+      );
+      const currentSlots = response.data;
+      
+      // Buscar si la cita seleccionada sigue disponible
+      const isStillAvailable = currentSlots.some(slot => 
+        slot.day === selectedSlot.day && 
+        slot.date === selectedSlot.date && 
+        slot.start === selectedSlot.start
+      );
+      
+      if (!isStillAvailable) {
+        // Actualizar las citas disponibles en la sesión
+        datosUsuario.slots = currentSlots;
+        
+        if (currentSlots.length === 0) {
+          await flowDynamic([
+            {
+              body: "⚠️ La cita que seleccionaste ya no está disponible. Actualmente no hay más citas disponibles.",
+            },
+            {
+              body: "Por favor, intenta más tarde o contáctanos directamente.",
+            }
+          ]);
+          return gotoFlow(welcomeFlow);
+        }
+        
+        // Crear mensaje con botones para las nuevas citas
+        const citasConBotones = currentSlots.map((slot, index) => ({
+          body: `🗓️ *${slot.day}* - ${slot.date} \n⏰ a las ${slot.start}`,
+          buttons: [{ body: `${index + 1}` }]
+        }));
 
-    return gotoFlow(flowReservarCita);
+        await flowDynamic([
+          {
+            body: "⚠️ La cita que seleccionaste ya no está disponible.",
+          },
+          
+        ]);
+        
+        return gotoFlow (flowCitasDisponibles); // Permanece en el mismo flujo para capturar la nueva selección
+      }
+      
+      // Si la cita está disponible, proceder
+      datosUsuario.horario = `${selectedSlot.day} ${selectedSlot.date} de ${selectedSlot.start} a ${selectedSlot.end}`;
+      console.log(
+        `Usuario (${idUsuario}) seleccionó la cita:`,
+        datosUsuario.horario
+      );
+
+      return gotoFlow(flowReservarCita);
+      
+    } catch (error) {
+      console.error("Error al validar disponibilidad de cita:", error);
+      await flowDynamic(
+        "Ocurrió un error al verificar la disponibilidad de la cita. Por favor, intenta nuevamente."
+      );
+      return gotoFlow(flowCitasDisponibles);
+    }
   }
 );
 
+
+
 export const flowReservarCita = addKeyword("RESERVAR_CITA").addAction(
-  async (ctx, { flowDynamic }) => {
+  async (ctx, { flowDynamic, gotoFlow }) => {
     const idUsuario = ctx.from;
     const datosUsuario = sesiones.get(idUsuario);
     const selectedSlot = datosUsuario.horario;
@@ -659,7 +716,7 @@ export const flowReservarCita = addKeyword("RESERVAR_CITA").addAction(
       await flowDynamic(
         "Parece que hubo un problema al seleccionar la cita. Por favor, inténtalo nuevamente. 😓"
       );
-      return;
+      return gotoFlow(flowCitasDisponibles);
     }
 
     const date = selectedSlot.split(" ")[1];
@@ -697,6 +754,35 @@ export const flowReservarCita = addKeyword("RESERVAR_CITA").addAction(
     }
 
     try {
+      // Validar una última vez la disponibilidad antes de reservar
+      const responseValidation = await axios.get(
+        "http://localhost:5000/DentalArce/getAvailableSlots/ce85ebbb918c7c7dfd7bad2eec6c142012d24c2b17e803e21b9d6cc98bb8472b"
+      );
+      const currentSlots = responseValidation.data;
+      
+      const isStillAvailable = currentSlots.some(slot => 
+        slot.day === selectedSlot.split(" ")[0] && 
+        slot.date === date && 
+        slot.start === startTime
+      );
+      
+      if (!isStillAvailable) {
+        // Actualizar las citas disponibles en la sesión
+        datosUsuario.slots = currentSlots;
+        
+        await flowDynamic([
+          {
+            body: "⚠️ Lo sentimos, la cita que seleccionaste fue tomada por otro paciente justo antes de que confirmáramos.",
+          },
+          {
+            body: "Vamos a mostrarte las nuevas opciones disponibles:",
+          }
+        ]);
+        
+        return gotoFlow(flowCitasDisponibles);
+      }
+
+      // Si sigue disponible, proceder con la reserva
       const response = await axios.post(
         "http://localhost:5000/DentalArce/crearCitaCV/ce85ebbb918c7c7dfd7bad2eec6c142012d24c2b17e803e21b9d6cc98bb8472b/ee75200b88065c8f339787783c521b9f5bcc11242f09ac9dd1512d23a98fb485",
         {
@@ -736,14 +822,38 @@ export const flowReservarCita = addKeyword("RESERVAR_CITA").addAction(
 
       console.log("Confirmación de paciente cita", respons.data);
 
-      await flowDynamic(
-        `¡Tu cita ha sido reservada exitosamente para el ${datosUsuario.horario}! 🎉 Te esperamos.`
-      );
+      await flowDynamic([
+        {
+          body: `✅ ¡Tu cita ha sido reservada exitosamente para el ${datosUsuario.horario}! 🎉`,
+        },
+        {
+          body: "Te enviaremos un recordatorio 2 días antes de tu cita. ¡Te esperamos!",
+        }
+      ]);
     } catch (error) {
       console.error("Error al reservar la cita:", error);
-      await flowDynamic(
-        "¡Ups! Algo salió mal al reservar la cita. Por favor, intenta más tarde. 🙏"
-      );
+      
+      if (error.response?.status === 409) {
+        // Conflicto - cita ya ocupada
+        await flowDynamic([
+          {
+            body: "⚠️ Lo sentimos, la cita que seleccionaste fue tomada por otro paciente mientras intentábamos reservarla.",
+          },
+          {
+            body: "Vamos a mostrarte las nuevas opciones disponibles:",
+          }
+        ]);
+        return gotoFlow(flowCitasDisponibles);
+      } else {
+        await flowDynamic([
+          {
+            body: "¡Ups! Algo salió mal al reservar la cita. Por favor, intenta más tarde. 🙏",
+          },
+          {
+            body: "Si el problema persiste, contáctanos directamente para asistencia.",
+          }
+        ]);
+      }
     }
 
     sesiones.delete(idUsuario);
