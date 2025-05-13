@@ -299,22 +299,39 @@ export const flowApodo = addKeyword("NO. ❌").addAnswer(
     if (!datosUsuario.apodo) {
       return fallBack("❌ Por favor, ingresa un apodo válido.");
     } else {
-      return gotoFlow(flowCondicionMedica); // Avanza al siguiente paso
+      return gotoFlow(flowAlergias); // Avanza al siguiente paso
     }
   }
 );
 
-export const flowCondicionMedica = addKeyword("CONDICION_PACIENTE").addAnswer(
-  '¿Tienes alguna condición médica, alergia, enfermedad o estás tomando algún medicamento que el doctor deba conocer? Si no, por favor escribe "Ninguna". 💉 ',
+export const flowAlergias = addKeyword("ALERGIAS_PACIENTE").addAnswer(
+  '¿Tienes alguna condición médica, alergia, enfermedad?, Si no por favor escribe "Ninguna" // ¿Estás tomando algún medicamento que el doctor deba conocer? Si no, por favor escribe "Ninguna". 💉 ',
   { capture: true },
   async (ctx, { fallBack, gotoFlow }) => {
     const idUsuario = ctx.from;
     const datosUsuario = sesiones.get(idUsuario);
-    datosUsuario.condicion = ctx.body.trim();
-    console.log(`Condición (${idUsuario}): ${datosUsuario.condicion}`);
+    datosUsuario.alergias = ctx.body.trim();
+    console.log(`Condición (${idUsuario}): ${datosUsuario.alergias}`);
 
-    if (!datosUsuario.condicion) {
-      return fallBack("❌ Por favor, ingresa una condición válida.");
+    if (!datosUsuario.alergias) {
+      return fallBack("❌ Por favor, ingresa una alergia válida.");
+    } else {
+      return gotoFlow(flowMedicamento); // Avanza al siguiente paso
+    }
+  }
+);
+
+export const flowMedicamento = addKeyword("MEDICAMENTOS_PACIENTE").addAnswer(
+  '¿Estás tomando algún medicamento que el doctor deba conocer? Si no, por favor escribe "Ninguna". 💉 ',
+  { capture: true },
+  async (ctx, { fallBack, gotoFlow }) => {
+    const idUsuario = ctx.from;
+    const datosUsuario = sesiones.get(idUsuario);
+    datosUsuario.medicamentos = ctx.body.trim();
+    console.log(`Condición (${idUsuario}): ${datosUsuario.medicamentos}`);
+
+    if (!datosUsuario.medicamentos) {
+      return fallBack("❌ Por favor, ingresa un medicamentos válido.");
     } else {
       return gotoFlow(flowMotivoVisita); // Avanza al siguiente paso
     }
@@ -366,7 +383,6 @@ export const flowObtenerCitas = addKeyword([
         fechaNac: datosUsuario.fechaNac,
         correoElectronico: datosUsuario.correoElectronico || null,
         apodo: datosUsuario.apodo,
-        condicion: datosUsuario.condicion,
         genero: datosUsuario.genero || null,
         altura: datosUsuario.altura || null,
         peso: datosUsuario.peso || null,
@@ -989,7 +1005,8 @@ const main = async () => {
     flowApellidoMaterno,
     flowApodo,
     flowCitasDisponibles,
-    flowCondicionMedica,
+    flowAlergias,
+    flowMedicamento,
     flowCorreoElectronico,
     flowFechaNacimiento,
     flowGeneroPaciente,
