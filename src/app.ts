@@ -305,7 +305,7 @@ export const flowApodo = addKeyword("NO. ❌").addAnswer(
 );
 
 export const flowAlergias = addKeyword("ALERGIAS_PACIENTE").addAnswer(
-  '¿Tienes alguna condición médica, alergia, enfermedad?, Si no por favor escribe "Ninguna" // ¿Estás tomando algún medicamento que el doctor deba conocer? Si no, por favor escribe "Ninguna". 💉 ',
+  '¿Tienes alguna condición médica, alergia, enfermedad?, Si no por favor escribe "Ninguna" 💉 ',
   { capture: true },
   async (ctx, { fallBack, gotoFlow }) => {
     const idUsuario = ctx.from;
