@@ -305,7 +305,7 @@ export const flowApodo = addKeyword("NO. ❌").addAnswer(
 );
 
 export const flowAlergias = addKeyword("ALERGIAS_PACIENTE").addAnswer(
-  '¿Tienes alguna condición médica, alergia, enfermedad?, Si no por favor escribe "Ninguna" 💉 ',
+  '¿Tienes alguna condición médica, alergia, enfermedad?, Si no por favor escribe "Ninguna" // ¿Estás tomando algún medicamento que el doctor deba conocer? Si no, por favor escribe "Ninguna". 💉 ',
   { capture: true },
   async (ctx, { fallBack, gotoFlow }) => {
     const idUsuario = ctx.from;
@@ -381,12 +381,12 @@ export const flowObtenerCitas = addKeyword([
         apeM: datosUsuario.apellidoMaterno,
         apeP: datosUsuario.apellidoPaterno,
         fechaNac: datosUsuario.fechaNac,
-        correoElectronico: datosUsuario.correoElectronico || null,
+        correoElectronico: datosUsuario.correoElectronico || '' ,
         apodo: datosUsuario.apodo,
-        genero: datosUsuario.genero || null,
-        altura: datosUsuario.altura || null,
-        peso: datosUsuario.peso || null,
-        direccion: datosUsuario.direccion || null,
+        genero: datosUsuario.genero || '' ,
+        altura: datosUsuario.altura || '' ,
+        peso: datosUsuario.peso || '' ,
+        direccion: datosUsuario.direccion || '' ,
         alergias: datosUsuario.alergias,
         medicamentos: datosUsuario.medicamentos,
         idDoctor: datosUsuario.idDoctor || null,
